@@ -12,6 +12,8 @@ const (
 	keyRotationDurationLabel = "key_ttl"
 	keyTokenTTL              = "jwt_ttl"
 	keySetIat                = "set_iat"
+	keySetJTI                = "set_jti"
+	keyIssuer                = "issuer"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -28,7 +30,15 @@ func pathConfig(b *backend) *framework.Path {
 			},
 			keySetIat: {
 				Type:        framework.TypeBool,
-				Description: `Whether or not to set the 'iat' claim.`,
+				Description: `Whether or not the backend should generate and set the 'iat' claim.`,
+			},
+			keySetJTI: {
+				Type:        framework.TypeBool,
+				Description: `Whether or not the backend should generate and set the 'jti' claim.`,
+			},
+			keyIssuer: {
+				Type:        framework.TypeString,
+				Description: `Value to set as the 'iss' claim. Claim is omitted if empty.`,
 			},
 		},
 
@@ -70,6 +80,14 @@ func (b *backend) pathConfigWrite(c context.Context, r *logical.Request, d *fram
 		b.config.SetIat = newSetIat.(bool)
 	}
 
+	if newSetJTI, ok := d.GetOk(keySetJTI); ok {
+		b.config.SetJTI = newSetJTI.(bool)
+	}
+
+	if newIssuer, ok := d.GetOk(keyIssuer); ok {
+		b.config.Issuer = newIssuer.(string)
+	}
+
 	return nonLockingRead(b)
 }
 
@@ -86,6 +104,8 @@ func nonLockingRead(b *backend) (*logical.Response, error) {
 			keyRotationDurationLabel: b.config.KeyRotationPeriod.String(),
 			keyTokenTTL:              b.config.TokenTTL.String(),
 			keySetIat:                b.config.SetIat,
+			keySetJTI:                b.config.SetJTI,
+			keyIssuer:                b.config.Issuer,
 		},
 	}, nil
 }
@@ -100,5 +120,7 @@ Configure the backend.
 key_ttl: Duration before a key stops signing new tokens and a new one is generated.
 		 After this period the public key will still be available to verify JWTs.
 jwt_ttl: Duration before a token expires.
-set_iat: Whether or not the backend should automatically set the 'iat' claim.
+set_iat: Whether or not the backend should generate and set the 'iat' claim.
+set_jti: Whether or not the backend should generate and set the 'jti' claim.
+issuer:  Value to set as the 'iss' claim. Claim omitted if empty.
 `

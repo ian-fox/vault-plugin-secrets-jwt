@@ -56,6 +56,8 @@ func TestSign(t *testing.T) {
 		Audience: []string{"Zapp Brannigan"},
 		Expiry:   &expectedExpiry,
 		IssuedAt: &expectedIssuedAt,
+		ID:       "1",
+		Issuer:   testIssuer,
 	}
 
 	if diff := deep.Equal(expectedClaims, claims); diff != nil {
