@@ -15,6 +15,9 @@ type Config struct {
 
 	// TokenTTL defines how long a token is valid for after being signed.
 	TokenTTL time.Duration
+
+	// SetIat defines if the backend sets the 'iat' claim or not.
+	SetIat bool
 }
 
 // DefaultConfig creates a new default configuration.
@@ -22,5 +25,6 @@ func DefaultConfig() *Config {
 	c := new(Config)
 	c.KeyRotationPeriod, _ = time.ParseDuration(DefaultKeyRotationPeriod)
 	c.TokenTTL, _ = time.ParseDuration(DefaultTokenTTL)
+	c.SetIat = true
 	return c
 }

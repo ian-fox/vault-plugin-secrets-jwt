@@ -23,17 +23,25 @@ vault write -field=token jwt/sign @claims.json > jwt1.txt
 jwtverify $(cat jwt1.txt) $VAULT_ADDR/v1/jwt/jwks | tee decoded.txt
 [[ $(cat decoded.txt | jq '.iss') = "Zapp Brannigan" ]]
 [[ $(cat decoded.txt | jq '.exp') =~ [0-9]+ ]]
+[[ $(cat decoded.txt | jq '.iat') =~ [0-9]+ ]]
+EXP_TIME=$()
+IAT_TIME=$()
+[[ "(( EXP_TIME - IAT_TIME ))" -eq 3 ]]
 
 # Wait and generate a second jwt
 sleep 3
+vault write jwt/config "set_iat=false"
 vault write -field=token jwt/sign @claims.json > jwt2.txt
 sleep 3
 
 # We should be able to verify the second JWT, but not the first.
-jwtverify $(cat jwt2.txt) $VAULT_ADDR/v1/jwt/jwks
+jwtverify $(cat jwt2.txt) $VAULT_ADDR/v1/jwt/jwks | tee decoded2.txt
 if ! jwtverify $(cat jwt1.txt) $VAULT_ADDR/v1/jwt/jwks; then
     echo "Key rotated successfully."
 else
     echo "Key rotation failed, first JWT still valid."
     exit 1
 fi
+
+# Second key should not have an iat claim
+[[ ! $(cat decoded2.txt) =~ "iat" ]]

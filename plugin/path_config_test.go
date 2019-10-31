@@ -75,6 +75,7 @@ func TestWriteConfig(t *testing.T) {
 		Data: map[string]interface{}{
 			keyRotationDurationLabel: secondUpdatedRotationPeriod,
 			keyTokenTTL:              updatedTTL,
+			keySetIat:                false,
 		},
 	}
 
@@ -85,6 +86,7 @@ func TestWriteConfig(t *testing.T) {
 
 	rotationPeriod = resp.Data[keyRotationDurationLabel].(string)
 	tokenTTL = resp.Data[keyTokenTTL].(string)
+	setIat := resp.Data[keySetIat].(bool)
 
 	if diff := deep.Equal(secondUpdatedRotationPeriod, rotationPeriod); diff != nil {
 		t.Error("failed to update rotation period:", diff)
@@ -92,6 +94,10 @@ func TestWriteConfig(t *testing.T) {
 
 	if diff := deep.Equal(updatedTTL, tokenTTL); diff != nil {
 		t.Error("expiry period should be unchanged:", diff)
+	}
+
+	if diff := deep.Equal(false, setIat); diff != nil {
+		t.Error("expected set_iat to be false")
 	}
 }
 

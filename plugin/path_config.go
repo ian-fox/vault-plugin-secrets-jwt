@@ -11,6 +11,7 @@ import (
 const (
 	keyRotationDurationLabel = "key_ttl"
 	keyTokenTTL              = "jwt_ttl"
+	keySetIat                = "set_iat"
 )
 
 func pathConfig(b *backend) *framework.Path {
@@ -24,6 +25,10 @@ func pathConfig(b *backend) *framework.Path {
 			keyTokenTTL: {
 				Type:        framework.TypeString,
 				Description: `Duration a token is valid for.`,
+			},
+			keySetIat: {
+				Type:        framework.TypeBool,
+				Description: `Whether or not to set the 'iat' claim.`,
 			},
 		},
 
@@ -61,6 +66,10 @@ func (b *backend) pathConfigWrite(c context.Context, r *logical.Request, d *fram
 		b.config.TokenTTL = duration
 	}
 
+	if newSetIat, ok := d.GetOk(keySetIat); ok {
+		b.config.SetIat = newSetIat.(bool)
+	}
+
 	return nonLockingRead(b)
 }
 
@@ -76,6 +85,7 @@ func nonLockingRead(b *backend) (*logical.Response, error) {
 		Data: map[string]interface{}{
 			keyRotationDurationLabel: b.config.KeyRotationPeriod.String(),
 			keyTokenTTL:              b.config.TokenTTL.String(),
+			keySetIat:                b.config.SetIat,
 		},
 	}, nil
 }
@@ -90,4 +100,5 @@ Configure the backend.
 key_ttl: Duration before a key stops signing new tokens and a new one is generated.
 		 After this period the public key will still be available to verify JWTs.
 jwt_ttl: Duration before a token expires.
+set_iat: Whether or not the backend should automatically set the 'iat' claim.
 `
