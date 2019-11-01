@@ -88,22 +88,20 @@ func (b *backend) pathSignWrite(_ context.Context, _ *logical.Request, d *framew
 	}
 
 	if rawAud, ok := claims["aud"]; ok {
-		switch rawAud.(type) {
+		switch aud := rawAud.(type) {
 		case string:
-			if !config.AudiencePattern.MatchString(rawAud.(string)) {
+			if !config.AudiencePattern.MatchString(aud) {
 				return logical.ErrorResponse("validation of 'aud' claim failed"), logical.ErrInvalidRequest
 			}
-			break
 		case []string:
-			if config.MaxAudiences > -1 && len(rawAud.([]string)) > config.MaxAudiences {
-				return logical.ErrorResponse("too many audience claims: %d", len(rawAud.([]string))), logical.ErrInvalidRequest
+			if config.MaxAudiences > -1 && len(aud) > config.MaxAudiences {
+				return logical.ErrorResponse("too many audience claims: %d", len(aud)), logical.ErrInvalidRequest
 			}
-			for _, aud := range rawAud.([]string) {
-				if !config.AudiencePattern.MatchString(aud) {
+			for _, audEntry := range aud {
+				if !config.AudiencePattern.MatchString(audEntry) {
 					return logical.ErrorResponse("validation of 'aud' claim failed"), logical.ErrInvalidRequest
 				}
 			}
-			break
 		default:
 			return logical.ErrorResponse("'aud' claim was %T, not string or []string", rawAud), logical.ErrInvalidRequest
 		}
