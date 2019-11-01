@@ -21,7 +21,7 @@ func TestDefaultConfig(t *testing.T) {
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   *storage,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -29,7 +29,7 @@ func TestDefaultConfig(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	rotationPeriod := resp.Data[keyRotationDurationLabel].(string)
+	rotationPeriod := resp.Data[keyRotationDuration].(string)
 	tokenTTL := resp.Data[keyTokenTTL].(string)
 
 	if diff := deep.Equal(DefaultKeyRotationPeriod, rotationPeriod); diff != nil {
@@ -47,9 +47,9 @@ func TestWriteConfig(t *testing.T) {
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   *storage,
 		Data: map[string]interface{}{
-			keyRotationDurationLabel: updatedRotationPeriod,
+			keyRotationDuration: updatedRotationPeriod,
 		},
 	}
 
@@ -58,7 +58,7 @@ func TestWriteConfig(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	rotationPeriod := resp.Data[keyRotationDurationLabel].(string)
+	rotationPeriod := resp.Data[keyRotationDuration].(string)
 	tokenTTL := resp.Data[keyTokenTTL].(string)
 	setIAT := resp.Data[keySetIAT].(bool)
 	setJTI := resp.Data[keySetJTI].(bool)
@@ -92,14 +92,14 @@ func TestWriteConfig(t *testing.T) {
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   *storage,
 		Data: map[string]interface{}{
-			keyRotationDurationLabel: secondUpdatedRotationPeriod,
-			keyTokenTTL:              updatedTTL,
-			keySetIAT:                false,
-			keySetJTI:                false,
-			keySetNBF:                false,
-			keyIssuer:                newIssuer,
+			keyRotationDuration: secondUpdatedRotationPeriod,
+			keyTokenTTL:         updatedTTL,
+			keySetIAT:           false,
+			keySetJTI:           false,
+			keySetNBF:           false,
+			keyIssuer:           newIssuer,
 		},
 	}
 
@@ -108,7 +108,7 @@ func TestWriteConfig(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	rotationPeriod = resp.Data[keyRotationDurationLabel].(string)
+	rotationPeriod = resp.Data[keyRotationDuration].(string)
 	tokenTTL = resp.Data[keyTokenTTL].(string)
 	setIAT = resp.Data[keySetIAT].(bool)
 	setJTI = resp.Data[keySetJTI].(bool)
@@ -146,13 +146,27 @@ func TestWriteInvalidConfig(t *testing.T) {
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "config",
-		Storage:   storage,
+		Storage:   *storage,
 		Data: map[string]interface{}{
-			keyRotationDurationLabel: "not a real duration",
+			keyRotationDuration: "not a real duration",
 		},
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
+	if err == nil {
+		t.Errorf("Should have errored but got response: %#v", resp)
+	}
+
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Storage:   *storage,
+		Data: map[string]interface{}{
+			keyAudiencePattern: "(",
+		},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Errorf("Should have errored but got response: %#v", resp)
 	}
