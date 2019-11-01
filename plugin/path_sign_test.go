@@ -52,12 +52,14 @@ func TestSign(t *testing.T) {
 
 	expectedExpiry := jwt.NumericDate(5 * 60)
 	expectedIssuedAt := jwt.NumericDate(0)
+	expectedNotBefore := jwt.NumericDate(0)
 	expectedClaims := jwt.Claims{
-		Audience: []string{"Zapp Brannigan"},
-		Expiry:   &expectedExpiry,
-		IssuedAt: &expectedIssuedAt,
-		ID:       "1",
-		Issuer:   testIssuer,
+		Audience:  []string{"Zapp Brannigan"},
+		Expiry:    &expectedExpiry,
+		IssuedAt:  &expectedIssuedAt,
+		NotBefore: &expectedNotBefore,
+		ID:        "1",
+		Issuer:    testIssuer,
 	}
 
 	if diff := deep.Equal(expectedClaims, claims); diff != nil {

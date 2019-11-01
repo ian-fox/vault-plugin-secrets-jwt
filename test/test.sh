@@ -56,6 +56,7 @@ jwtverify $(cat jwt1.txt) $VAULT_ADDR/v1/jwt/jwks | tee decoded.txt
 expect_equal "$(cat decoded.txt | jq '.sub')" '"Zapp Brannigan"' "Wrong subject"
 expect_match $(cat decoded.txt | jq '.exp') "[0-9]+" "Invalid 'exp' claim"
 expect_match $(cat decoded.txt | jq '.iat') "[0-9]+" "Invalid 'iat' claim"
+expect_match $(cat decoded.txt | jq '.nbf') "[0-9]+" "Invalid 'nbf' claim"
 
 EXP_TIME=$(cat decoded.txt | jq '.exp')
 IAT_TIME=$(cat decoded.txt | jq '.iat')
