@@ -31,14 +31,13 @@ func pathSign(b *backend) *framework.Path {
 }
 
 func (b *backend) pathSignWrite(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	claims := make(map[string]interface{})
 	rawClaims, ok := d.GetOk("claims")
-	if !ok {
-		return logical.ErrorResponse("no claims provided"), logical.ErrInvalidRequest
-	}
-
-	claims, ok := rawClaims.(map[string]interface{})
-	if !ok {
-		return logical.ErrorResponse("claims not a map"), logical.ErrInvalidRequest
+	if ok {
+		claims, ok = rawClaims.(map[string]interface{})
+		if !ok {
+			return logical.ErrorResponse("claims not a map"), logical.ErrInvalidRequest
+		}
 	}
 
 	// Get a local copy of config, to minimize time with the lock
@@ -75,6 +74,12 @@ func (b *backend) pathSignWrite(_ context.Context, _ *logical.Request, d *framew
 
 	if config.Issuer != "" {
 		claims["iss"] = config.Issuer
+	}
+	if config.Audience != "" {
+		claims["aud"] = config.Audience
+	}
+	if config.Subject != "" {
+		claims["sub"] = config.Subject
 	}
 
 	if rawSub, ok := claims["sub"]; ok {
