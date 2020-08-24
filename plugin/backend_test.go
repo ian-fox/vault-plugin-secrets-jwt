@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const testIssuer = "vault-plugin-secrets-jwt:test"
+const testIssuer = ""
 
 func getTestBackend(t *testing.T) (*backend, *logical.Storage) {
 	config := &logical.BackendConfig{

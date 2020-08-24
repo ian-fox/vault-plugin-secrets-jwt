@@ -181,6 +181,8 @@ func nonLockingRead(b *backend) (*logical.Response, error) {
 			keySetJTI:              b.config.SetJTI,
 			keySetNBF:              b.config.SetNBF,
 			keyIssuer:              b.config.Issuer,
+			keyAudience:            b.config.Audience,
+			keySubject:             b.config.Subject,
 			keyAudiencePattern:     b.config.AudiencePattern.String(),
 			keySubjectPattern:      b.config.SubjectPattern.String(),
 			keyMaxAllowedAudiences: b.config.MaxAudiences,
