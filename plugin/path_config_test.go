@@ -116,6 +116,8 @@ func TestWriteConfig(t *testing.T) {
 	setJTI = resp.Data[keySetJTI].(bool)
 	setNBF = resp.Data[keySetNBF].(bool)
 	issuer = resp.Data[keyIssuer].(string)
+	aud := resp.Data[keyAudience].(string)
+	sub := resp.Data[keySubject].(string)
 
 	if diff := deep.Equal(secondUpdatedRotationPeriod, rotationPeriod); diff != nil {
 		t.Error("failed to update rotation period:", diff)
@@ -139,6 +141,14 @@ func TestWriteConfig(t *testing.T) {
 
 	if diff := deep.Equal(newIssuer, issuer); diff != nil {
 		t.Error("unexpected issuer:", diff)
+	}
+
+	if diff := deep.Equal("", aud); diff != nil {
+		t.Error("unexpected aud:", diff)
+	}
+
+	if diff := deep.Equal("", sub); diff != nil {
+		t.Error("unexpected sub:", diff)
 	}
 }
 
