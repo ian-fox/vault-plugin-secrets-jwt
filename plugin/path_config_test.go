@@ -13,6 +13,8 @@ const (
 	secondUpdatedRotationPeriod = "1h0m0s"
 	updatedTTL                  = "6m0s"
 	newIssuer                   = "new-vault"
+	newAud                      = "aud"
+	newSub                      = "sub"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -114,6 +116,8 @@ func TestWriteConfig(t *testing.T) {
 	setJTI = resp.Data[keySetJTI].(bool)
 	setNBF = resp.Data[keySetNBF].(bool)
 	issuer = resp.Data[keyIssuer].(string)
+	aud := resp.Data[keyAudience].(string)
+	sub := resp.Data[keySubject].(string)
 
 	if diff := deep.Equal(secondUpdatedRotationPeriod, rotationPeriod); diff != nil {
 		t.Error("failed to update rotation period:", diff)
@@ -137,6 +141,74 @@ func TestWriteConfig(t *testing.T) {
 
 	if diff := deep.Equal(newIssuer, issuer); diff != nil {
 		t.Error("unexpected issuer:", diff)
+	}
+
+	if diff := deep.Equal("", aud); diff != nil {
+		t.Error("unexpected aud:", diff)
+	}
+
+	if diff := deep.Equal("", sub); diff != nil {
+		t.Error("unexpected sub:", diff)
+	}
+}
+
+func TestWriteAudSubConfig(t *testing.T) {
+	b, storage := getTestBackend(t)
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Storage:   *storage,
+		Data: map[string]interface{}{
+			keyAudience: newAud,
+			keySubject:  newSub,
+		},
+	}
+
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	rotationPeriod := resp.Data[keyRotationDuration].(string)
+	tokenTTL := resp.Data[keyTokenTTL].(string)
+	setIAT := resp.Data[keySetIAT].(bool)
+	setJTI := resp.Data[keySetJTI].(bool)
+	setNBF := resp.Data[keySetNBF].(bool)
+	issuer := resp.Data[keyIssuer].(string)
+	aud := resp.Data[keyAudience].(string)
+	sub := resp.Data[keySubject].(string)
+
+	if diff := deep.Equal(DefaultKeyRotationPeriod, rotationPeriod); diff != nil {
+		t.Error("failed to update rotation period:", diff)
+	}
+
+	if diff := deep.Equal(DefaultTokenTTL, tokenTTL); diff != nil {
+		t.Error("expiry period should be unchanged:", diff)
+	}
+
+	if diff := deep.Equal(DefaultSetIAT, setIAT); diff != nil {
+		t.Error("set_iat should be unchanged:", diff)
+	}
+
+	if diff := deep.Equal(DefaultSetJTI, setJTI); diff != nil {
+		t.Error("set_jti should be unchanged:", diff)
+	}
+
+	if diff := deep.Equal(DefaultSetNBF, setNBF); diff != nil {
+		t.Error("set_nbf should be unchanged:", diff)
+	}
+
+	if diff := deep.Equal(testIssuer, issuer); diff != nil {
+		t.Error("unexpected issuer:", diff)
+	}
+
+	if diff := deep.Equal(newAud, aud); diff != nil {
+		t.Error("unexpected aud:", diff)
+	}
+
+	if diff := deep.Equal(newSub, sub); diff != nil {
+		t.Error("unexpected sub:", diff)
 	}
 }
 

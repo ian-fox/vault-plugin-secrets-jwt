@@ -31,25 +31,37 @@ func pathSign(b *backend) *framework.Path {
 }
 
 func (b *backend) pathSignWrite(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	rawClaims, ok := d.GetOk("claims")
-	if !ok {
-		return logical.ErrorResponse("no claims provided"), logical.ErrInvalidRequest
-	}
-
-	claims, ok := rawClaims.(map[string]interface{})
-	if !ok {
-		return logical.ErrorResponse("claims not a map"), logical.ErrInvalidRequest
-	}
-
 	// Get a local copy of config, to minimize time with the lock
 	b.configLock.RLock()
 	config := *b.config
 	b.configLock.RUnlock()
 
-	for claim := range claims {
+	claims := make(map[string]interface{})
+	parsedClaims := make(map[string]interface{})
+	// Configurable default claims
+	if config.Issuer != "" {
+		claims["iss"] = config.Issuer
+	}
+	if config.Audience != "" {
+		claims["aud"] = config.Audience
+	}
+	if config.Subject != "" {
+		claims["sub"] = config.Subject
+	}
+
+	rawClaims, ok := d.GetOk("claims")
+	if ok {
+		parsedClaims, ok = rawClaims.(map[string]interface{})
+		if !ok {
+			return logical.ErrorResponse("claims not a map"), logical.ErrInvalidRequest
+		}
+	}
+
+	for claim, val := range parsedClaims {
 		if allowedClaim, ok := config.allowedClaimsMap[claim]; !ok || !allowedClaim {
 			return logical.ErrorResponse("claim %s not permitted", claim), logical.ErrInvalidRequest
 		}
+		claims[claim] = val
 	}
 
 	now := b.clock.now()
@@ -71,10 +83,6 @@ func (b *backend) pathSignWrite(_ context.Context, _ *logical.Request, d *framew
 			return logical.ErrorResponse("could not generate 'jti' claim: %v", err), err
 		}
 		claims["jti"] = jti
-	}
-
-	if config.Issuer != "" {
-		claims["iss"] = config.Issuer
 	}
 
 	if rawSub, ok := claims["sub"]; ok {

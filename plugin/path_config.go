@@ -16,6 +16,8 @@ const (
 	keySetJTI              = "set_jti"
 	keySetNBF              = "set_nbf"
 	keyIssuer              = "issuer"
+	keyAudience            = "audience"
+	keySubject             = "subject"
 	keyAudiencePattern     = "audience_pattern"
 	keySubjectPattern      = "subject_pattern"
 	keyMaxAllowedAudiences = "max_audiences"
@@ -49,6 +51,14 @@ func pathConfig(b *backend) *framework.Path {
 			keyIssuer: {
 				Type:        framework.TypeString,
 				Description: `Value to set as the 'iss' claim. Claim is omitted if empty.`,
+			},
+			keyAudience: {
+				Type:        framework.TypeString,
+				Description: `Value to set as the 'aud' claim. Claim is omitted if empty.`,
+			},
+			keySubject: {
+				Type:        framework.TypeString,
+				Description: `Value to set as the 'sub' claim. Claim is omitted if empty.`,
 			},
 			keyAudiencePattern: {
 				Type:        framework.TypeString,
@@ -119,6 +129,14 @@ func (b *backend) pathConfigWrite(c context.Context, r *logical.Request, d *fram
 		b.config.Issuer = newIssuer.(string)
 	}
 
+	if newAudience, ok := d.GetOk(keyAudience); ok {
+		b.config.Audience = newAudience.(string)
+	}
+
+	if newSubject, ok := d.GetOk(keySubject); ok {
+		b.config.Subject = newSubject.(string)
+	}
+
 	if newAudiencePattern, ok := d.GetOk(keyAudiencePattern); ok {
 		pattern, err := regexp.Compile(newAudiencePattern.(string))
 		if err != nil {
@@ -163,6 +181,8 @@ func nonLockingRead(b *backend) (*logical.Response, error) {
 			keySetJTI:              b.config.SetJTI,
 			keySetNBF:              b.config.SetNBF,
 			keyIssuer:              b.config.Issuer,
+			keyAudience:            b.config.Audience,
+			keySubject:             b.config.Subject,
 			keyAudiencePattern:     b.config.AudiencePattern.String(),
 			keySubjectPattern:      b.config.SubjectPattern.String(),
 			keyMaxAllowedAudiences: b.config.MaxAudiences,
@@ -185,6 +205,8 @@ set_iat:          Whether or not the backend should generate and set the 'iat' c
 set_jti:          Whether or not the backend should generate and set the 'jti' claim.
 set_nbf:          Whether or not the backend should generate and set the 'nbf' claim.
 issuer:           Value to set as the 'iss' claim. Claim omitted if empty.
+audience:         Value to set as the 'aud' claim. Claim omitted if empty.
+subject:          Value to set as the 'sub' claim. Claim omitted if empty.
 audience_pattern: Regular expression which must match incoming 'aud' claims.
 subject_pattern:  Regular expression which must match incoming 'sub' claims.
 max_audiences:    Maximum number of allowed audiences, or -1 for no limit.

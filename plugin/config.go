@@ -2,7 +2,6 @@ package jwtsecrets
 
 import (
 	"regexp"
-	"strings"
 	"time"
 )
 
@@ -13,7 +12,6 @@ const (
 	DefaultSetIAT            = true
 	DefaultSetJTI            = true
 	DefaultSetNBF            = true
-	DefaultIssuer            = "vault-plugin-secrets-jwt:UUID"
 	DefaultAudiencePattern   = ".*"
 	DefaultSubjectPattern    = ".*"
 	DefaultMaxAudiences      = -1
@@ -23,6 +21,7 @@ const (
 // By default only the 'aud' and 'sub' claims can be set by the caller.
 var DefaultAllowedClaims = []string{"aud", "sub"}
 
+// ReservedClaims are claims that can't be dynamically altered
 var ReservedClaims = []string{"iss", "exp", "nbf", "iat", "jti"}
 
 // Config holds all configuration for the backend.
@@ -44,6 +43,12 @@ type Config struct {
 
 	// Issuer defines the 'iss' claim for the jwt. If blank, it is omitted.
 	Issuer string
+
+	// Audience defines the 'aud' claim for the jwt. If blank, it is omitted.
+	Audience string
+
+	// Subject defines the 'sub' claim for the jwt. If blank, it is omitted.
+	Subject string
 
 	// AudiencePattern defines a regular expression (https://golang.org/pkg/regexp/) which must be matched by any incoming 'aud' claims.
 	// If the audience claim is an array, each element in the array must match the pattern.
@@ -70,7 +75,6 @@ func DefaultConfig(backendUUID string) *Config {
 	c.SetIAT = DefaultSetIAT
 	c.SetJTI = DefaultSetJTI
 	c.SetNBF = DefaultSetNBF
-	c.Issuer = strings.Replace(DefaultIssuer, "UUID", backendUUID, 1)
 	c.AudiencePattern = regexp.MustCompile(DefaultAudiencePattern)
 	c.SubjectPattern = regexp.MustCompile(DefaultSubjectPattern)
 	c.MaxAudiences = DefaultMaxAudiences
