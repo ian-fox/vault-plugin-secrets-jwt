@@ -15,6 +15,7 @@ type backend struct {
 	clock      clock
 	config     *Config
 	configLock *sync.RWMutex
+	claimsLock *sync.RWMutex
 	keys       []*signingKey
 	keysLock   *sync.RWMutex
 	uuidGen    uuidGenerator
@@ -41,6 +42,8 @@ func makeBackend(backendUUID string) (*backend, error) {
 	b.configLock = new(sync.RWMutex)
 	b.config = DefaultConfig(backendUUID)
 
+	b.claimsLock = new(sync.RWMutex)
+
 	b.clock = realClock{}
 	b.uuidGen = realUUIDGenerator{}
 
@@ -54,6 +57,7 @@ func makeBackend(backendUUID string) (*backend, error) {
 			pathConfig(b),
 			pathJwks(b),
 			pathSign(b),
+			pathClaims(b),
 		},
 	}
 
