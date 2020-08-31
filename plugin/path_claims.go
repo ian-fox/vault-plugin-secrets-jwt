@@ -31,7 +31,7 @@ func pathClaims(b *backend) *framework.Path {
 				Callback: b.pathClaimsWrite,
 			},
 			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathConfigRead,
+				Callback: b.pathClaimsRead,
 			},
 		},
 		HelpSynopsis:    pathClaimsHelpSyn,
@@ -67,6 +67,25 @@ func (b *backend) pathClaimsWrite(ctx context.Context, r *logical.Request, d *fr
 	err = r.Storage.Put(ctx, entry)
 	if err != nil {
 		return logical.ErrorResponse("Failed to save claim"), err
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			keyClaims: claims,
+		},
+	}, nil
+}
+
+func (b *backend) pathClaimsRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, ok := d.GetOk("name")
+	if !ok {
+		return logical.ErrorResponse("name is required"), nil
+	}
+	name := nameRaw.(string)
+
+	claims, err := getClaims(ctx, name, r.Storage)
+	if err != nil {
+		return nil, err
 	}
 
 	return &logical.Response{
