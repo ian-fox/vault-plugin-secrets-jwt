@@ -15,7 +15,7 @@ const (
 
 func pathClaims(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: fmt.Sprintf("claims/%s", framework.GenericNameRegex("name")),
+		Pattern: fmt.Sprintf("%s/%s", claimsStoragePrefix, framework.GenericNameRegex("name")),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -28,6 +28,9 @@ func pathClaims(b *backend) *framework.Path {
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathClaimsWrite,
+			},
+			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathClaimsWrite,
 			},
 			logical.ReadOperation: &framework.PathOperation{

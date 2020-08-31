@@ -97,3 +97,10 @@ vault write -field=allowed_claims jwt/config @allowed_claims.json
 vault write -field=token jwt/sign @claims_foo.json > jwt3.txt
 jwtverify $(cat jwt3.txt) $VAULT_ADDR/v1/jwt/jwks | tee decoded3.txt
 expect_equal "$(cat decoded3.txt | jq '.foo')" '"bar"' "jwt should have 'foo' field set"
+
+
+# Create custom claims
+vault write jwt/claims/test @claims.json
+claims=$(vault read jwt/claims/test/ -format=json)
+expect_equal "$(echo $claims | jq '.data')" "$(cat claims.json | jq .)" "read claims do not match written ones"
+

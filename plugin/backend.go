@@ -54,10 +54,10 @@ func makeBackend(backendUUID string) (*backend, error) {
 			Unauthenticated: []string{"jwks"},
 		},
 		Paths: []*framework.Path{
+			pathClaims(b),
 			pathConfig(b),
 			pathJwks(b),
 			pathSign(b),
-			pathClaims(b),
 		},
 	}
 
