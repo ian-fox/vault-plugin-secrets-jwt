@@ -78,41 +78,6 @@ func TestSign(t *testing.T) {
 	}
 }
 
-func TestSignWithAudSub(t *testing.T) {
-	b, storage := getTestBackend(t)
-
-	b.config.Subject = "sub"
-	b.config.allowedClaimsMap["sub"] = true
-	b.config.Audience = "aud"
-	b.config.allowedClaimsMap["aud"] = true
-
-	claims := map[string]interface{}{
-		"aud": []string{"Zapp Brannigan", "Kif Kroker"},
-	}
-
-	var decoded jwt.Claims
-	if err := getSignedToken(b, storage, claims, &decoded); err != nil {
-		t.Fatalf("%v\n", err)
-	}
-
-	expectedExpiry := jwt.NumericDate(5 * 60)
-	expectedIssuedAt := jwt.NumericDate(0)
-	expectedNotBefore := jwt.NumericDate(0)
-	expectedClaims := jwt.Claims{
-		Audience:  []string{"Zapp Brannigan", "Kif Kroker"},
-		Expiry:    &expectedExpiry,
-		IssuedAt:  &expectedIssuedAt,
-		NotBefore: &expectedNotBefore,
-		ID:        "1",
-		Issuer:    testIssuer,
-		Subject:   "sub",
-	}
-
-	if diff := deep.Equal(expectedClaims, decoded); diff != nil {
-		t.Error(diff)
-	}
-}
-
 type customToken struct {
 	Foo string `json:"foo"`
 }

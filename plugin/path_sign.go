@@ -42,12 +42,6 @@ func (b *backend) pathSignWrite(_ context.Context, _ *logical.Request, d *framew
 	if config.Issuer != "" {
 		claims["iss"] = config.Issuer
 	}
-	if config.Audience != "" {
-		claims["aud"] = config.Audience
-	}
-	if config.Subject != "" {
-		claims["sub"] = config.Subject
-	}
 
 	rawClaims, ok := d.GetOk("claims")
 	if ok {
