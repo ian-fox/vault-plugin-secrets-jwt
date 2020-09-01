@@ -13,14 +13,14 @@ const (
 	claimsPathB = "pathB"
 )
 
-func claimsA() map[string]string {
-	return map[string]string{
+func claimsA() map[string]interface{} {
+	return map[string]interface{}{
 		"iss": "pathA",
 	}
 }
 
-func claimsB() map[string]string {
-	return map[string]string{
+func claimsB() map[string]interface{} {
+	return map[string]interface{}{
 		"iss": "pathB",
 		"sub": "test",
 	}
@@ -32,7 +32,7 @@ func TestWriteClaims(t *testing.T) {
 	dataA := map[string]interface{}{
 		"claims": claimsA(),
 	}
-	err := writeAndCheckClaims(b, storage, dataA, claimsA())
+	err := writeAndCheckClaims(b, storage, claimsPathA, dataA, claimsA())
 	if err != nil {
 		t.Error(err)
 	}
@@ -40,7 +40,7 @@ func TestWriteClaims(t *testing.T) {
 	dataB := map[string]interface{}{
 		"claims": claimsA(),
 	}
-	err = writeAndCheckClaims(b, storage, dataB, claimsB())
+	err = writeAndCheckClaims(b, storage, claimsPathB, dataB, claimsB())
 	if err != nil {
 		t.Error(err)
 	}
@@ -52,7 +52,7 @@ func TestReadClaims(t *testing.T) {
 	dataA := map[string]interface{}{
 		"claims": claimsA(),
 	}
-	err := writeAndCheckClaims(b, storage, dataA, claimsA())
+	err := writeAndCheckClaims(b, storage, claimsPathA, dataA, claimsA())
 	if err != nil {
 		t.Error(err)
 	}
@@ -68,16 +68,16 @@ func TestReadClaims(t *testing.T) {
 		t.Error(err)
 	}
 
-	claims := resp.Data[keyClaims].(map[string]string)
+	claims := resp.Data[keyClaims].(map[string]interface{})
 	if diff := deep.Equal(claimsA(), claims); diff != nil {
 		t.Error(err)
 	}
 }
 
-func writeAndCheckClaims(b *backend, storage *logical.Storage, data map[string]interface{}, expected map[string]string) error {
+func writeAndCheckClaims(b *backend, storage *logical.Storage, path string, data map[string]interface{}, expected map[string]interface{}) error {
 	req := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      claimsPath(claimsPathA),
+		Path:      claimsPath(path),
 		Storage:   *storage,
 		Data:      data,
 	}
@@ -87,8 +87,7 @@ func writeAndCheckClaims(b *backend, storage *logical.Storage, data map[string]i
 		return err
 	}
 
-	claims := resp.Data[keyClaims].(map[string]string)
-
+	claims := resp.Data[keyClaims].(map[string]interface{})
 	if diff := deep.Equal(claimsA(), claims); diff != nil {
 		return err
 	}

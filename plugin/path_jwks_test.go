@@ -7,6 +7,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/logical"
 	"gopkg.in/square/go-jose.v2"
+	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 func TestEmptyJwks(t *testing.T) {
@@ -37,30 +38,28 @@ func TestJwks(t *testing.T) {
 	b, storage := getTestBackend(t)
 
 	// Cause it to generate a key
-	data := map[string]interface{}{
+	claims := map[string]interface{}{
 		"claims": map[string]interface{}{
 			"aud": "Zapp Brannigan",
 		},
 	}
 
-	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "sign",
-		Storage:   *storage,
-		Data:      data,
+	err := writeAndCheckClaims(b, storage, claimsPathA, claims, claims)
+	if err != nil {
+		t.Fatalf(err.Error())
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	var decoded jwt.Claims
+	if err := getSignedToken(b, storage, claimsPathA, &decoded); err != nil {
+		t.Fatalf("%v\n", err)
 	}
 
-	req = &logical.Request{
+	req := &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "jwks",
 		Storage:   *storage,
 	}
 
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}

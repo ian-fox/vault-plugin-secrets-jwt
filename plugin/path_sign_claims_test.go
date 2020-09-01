@@ -10,16 +10,11 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
-func getSignedToken(b *backend, storage *logical.Storage, claims map[string]interface{}, dest interface{}) error {
-	data := map[string]interface{}{
-		"claims": claims,
-	}
-
+func getSignedToken(b *backend, storage *logical.Storage, path string, dest interface{}) error {
 	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "sign",
+		Operation: logical.ReadOperation,
+		Path:      signClaimsPath(path),
 		Storage:   *storage,
-		Data:      data,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -53,11 +48,17 @@ func TestSign(t *testing.T) {
 	b, storage := getTestBackend(t)
 
 	claims := map[string]interface{}{
-		"aud": []string{"Zapp Brannigan", "Kif Kroker"},
+		"claims": map[string]interface{}{
+			"aud": "Zapp Brannigan",
+		},
 	}
 
+	err := writeAndCheckClaims(b, storage, claimsPathA, claims, claims)
+	if err != nil {
+		t.Fatalf("%v\n", err)
+	}
 	var decoded jwt.Claims
-	if err := getSignedToken(b, storage, claims, &decoded); err != nil {
+	if err := getSignedToken(b, storage, claimsPathA, &decoded); err != nil {
 		t.Fatalf("%v\n", err)
 	}
 
@@ -65,7 +66,7 @@ func TestSign(t *testing.T) {
 	expectedIssuedAt := jwt.NumericDate(0)
 	expectedNotBefore := jwt.NumericDate(0)
 	expectedClaims := jwt.Claims{
-		Audience:  []string{"Zapp Brannigan", "Kif Kroker"},
+		Audience:  []string{"Zapp Brannigan"},
 		Expiry:    &expectedExpiry,
 		IssuedAt:  &expectedIssuedAt,
 		NotBefore: &expectedNotBefore,
@@ -78,50 +79,24 @@ func TestSign(t *testing.T) {
 	}
 }
 
-type customToken struct {
-	Foo string `json:"foo"`
-}
-
-func TestPrivateClaim(t *testing.T) {
+func TestSignInvalidPath(t *testing.T) {
 	b, storage := getTestBackend(t)
-	b.config.allowedClaimsMap["foo"] = true
-
-	claims := map[string]interface{}{
-		"foo": "bar",
-	}
-
-	var decoded customToken
-	if err := getSignedToken(b, storage, claims, &decoded); err != nil {
-		t.Fatalf("%v\n", err)
-	}
-
-	expectedClaims := customToken{
-		Foo: "bar",
-	}
-
-	if diff := deep.Equal(expectedClaims, decoded); diff != nil {
-		t.Error(diff)
-	}
-}
-
-func TestRejectReservedClaims(t *testing.T) {
-	b, storage := getTestBackend(t)
-
-	data := map[string]interface{}{
-		"claims": map[string]interface{}{
-			"exp": 1234,
-		},
-	}
 
 	req := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "sign",
+		Operation: logical.ReadOperation,
+		Path:      signClaimsPath("non-existent"),
 		Storage:   *storage,
-		Data:      data,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
-	if err == nil || resp != nil && !resp.IsError() {
-		t.Fatalf("expected to get an error from sign. got:%v\n", resp)
+	if err != nil {
+		t.Fatalf("%v\n", err)
 	}
+	if !resp.IsError() {
+		t.Fatalf("call should have failed")
+	}
+}
+
+type customToken struct {
+	Foo string `json:"foo"`
 }

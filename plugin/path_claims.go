@@ -22,7 +22,7 @@ func pathClaims(b *backend) *framework.Path {
 				Description: "Required. Name of the custom claims set.",
 			},
 			"claims": {
-				Type:        framework.TypeKVPairs,
+				Type:        framework.TypeMap,
 				Description: "Required. The map of custom claims.",
 			},
 		},
@@ -52,14 +52,14 @@ func (b *backend) pathClaimsWrite(ctx context.Context, r *logical.Request, d *fr
 	}
 	name := nameRaw.(string)
 
-	claims, err := getClaims(ctx, name, r.Storage)
+	claims, err := b.getClaims(ctx, name, r.Storage)
 	if err != nil {
 		return nil, err
 	}
 
 	if claims == nil {
 		if c, ok := d.GetOk(keyClaims); ok {
-			claims = c.(map[string]string)
+			claims = c.(map[string]interface{})
 		}
 	}
 
@@ -86,7 +86,7 @@ func (b *backend) pathClaimsRead(ctx context.Context, r *logical.Request, d *fra
 	}
 	name := nameRaw.(string)
 
-	claims, err := getClaims(ctx, name, r.Storage)
+	claims, err := b.getClaims(ctx, name, r.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func (b *backend) pathClaimsRead(ctx context.Context, r *logical.Request, d *fra
 	}, nil
 }
 
-func getClaims(ctx context.Context, name string, s logical.Storage) (map[string]string, error) {
+func (b *backend) getClaims(ctx context.Context, name string, s logical.Storage) (map[string]interface{}, error) {
 	entry, err := s.Get(ctx, claimsPath(name))
 	if err != nil {
 		return nil, err
@@ -106,8 +106,7 @@ func getClaims(ctx context.Context, name string, s logical.Storage) (map[string]
 	if entry == nil {
 		return nil, nil
 	}
-
-	c := map[string]string{}
+	c := make(map[string]interface{})
 	if err := entry.DecodeJSON(&c); err != nil {
 		return nil, err
 	}

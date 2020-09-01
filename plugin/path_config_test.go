@@ -158,18 +158,4 @@ func TestWriteInvalidConfig(t *testing.T) {
 	if err == nil {
 		t.Errorf("Should have errored but got response: %#v", resp)
 	}
-
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config",
-		Storage:   *storage,
-		Data: map[string]interface{}{
-			keyAudiencePattern: "(",
-		},
-	}
-
-	resp, err = b.HandleRequest(context.Background(), req)
-	if err == nil {
-		t.Errorf("Should have errored but got response: %#v", resp)
-	}
 }
