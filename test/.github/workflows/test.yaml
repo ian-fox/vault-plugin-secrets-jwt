@@ -1,0 +1,9 @@
+name: tests
+on: [push]
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: lint
+        uses: golangci/golangci-lint:v1.27.0
+        run: golangci-lint run -v
