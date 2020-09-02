@@ -1,5 +1,7 @@
 name: Build Release
-on: release
+on:
+  release:
+    types: [published]
 
 jobs:
   release-linux-amd64:
@@ -12,10 +14,9 @@ jobs:
         go-version: ^1.13
       id: go
 
-    - name: Run functional tests
-      run: make functional
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
 
-    - uses: actions/checkout@master
     - name: compile and release
       uses: ngs/go-release.action@v1.0.1
       env:
