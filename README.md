@@ -1,4 +1,4 @@
-# Vault Plugin: JWT Backend 
+# Vault Plugin: JWT Backend
 ![](https://travis-ci.org/ian-fox/vault-plugin-secrets-jwt.svg?branch=master)
 ![](https://goreportcard.com/badge/github.com/ian-fox/vault-plugin-secrets-jwt)
 
@@ -14,3 +14,70 @@ It is still under early development and should not be used anywhere.
     - Main Project Github: https://www.github.com/hashicorp/vault
     - Package docs: https://godoc.org/github.com/ian-fox/vault-plugin-secrets-jwt
     - JWT docs: https://jwt.io
+
+## Usage
+
+### Config
+Plugin global configurations.
+
+Example
+```bash
+vault write jwt/config "key_ttl=2s" "jwt_ttl=3s"
+```
+
+Options
+
+|key|description|
+|---|-----------|
+key_ttl|Duration before a key stops signing new tokens and a new one is generated. After this period the public key will still be available to verify JWTs.
+jwt_ttl|Duration before a token expires.
+set_iat|Whether or not the backend should generate and set the 'iat' claim.
+set_jti|Whether or not the backend should generate and set the 'jti' claim.
+set_nbf|Whether or not the backend should generate and set the 'nbf' claim.
+issuer|Value to set as the 'iss' claim. Claim omitted if empty.
+
+
+### Claims
+
+Set claims for a given path.
+
+Example
+
+```bash
+vault write jwt/claims/test @claims.json
+```
+
+Payload Example
+
+```json
+{
+    "claims": {
+        "sub": "Zapp Brannigan"
+    }
+}
+```
+
+Options
+
+|key|description|
+|---|-----------|
+|claims| Map of custom claims.|
+
+### Sign
+
+Signs an JWt with the claims set on the custom path.
+
+Example
+```
+vault read jwt/claims/test
+```
+
+### JWKS
+
+Exposes the public key on an unauthenticated endpoint.
+
+Example
+
+```bash
+curl <vault_addr>/v1/jwt/jwks
+```

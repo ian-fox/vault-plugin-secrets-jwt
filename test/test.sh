@@ -46,10 +46,15 @@ vault plugin register -sha256 $SHASUM vault-plugin-secrets-jwt
 vault secrets enable -path=jwt vault-plugin-secrets-jwt
 
 # Change the expiry time and make a pattern to check subjects against
-vault write jwt/config "key_ttl=2s" "jwt_ttl=3s" "subject_pattern=^[A-Z][a-z]+ [A-Z][a-z]+$"
+vault write jwt/config "key_ttl=2s" "jwt_ttl=3s"
+
+# Create custom claims
+vault write jwt/claims/test @claims.json
+claims=$(vault read jwt/claims/test/ -format=json)
+expect_equal "$(echo $claims | jq '.data')" "$(cat claims.json | jq .)" "read claims do not match written ones"
 
 # Create a token
-vault write -field=token jwt/sign @claims.json > jwt1.txt
+vault read -field=token jwt/sign/test > jwt1.txt
 
 # Check that the token is as we expect
 jwtverify $(cat jwt1.txt) $VAULT_ADDR/v1/jwt/jwks | tee decoded.txt
@@ -68,7 +73,7 @@ fi
 # Wait and generate a second jwt
 sleep 3
 vault write jwt/config "set_iat=false"
-vault write -field=token jwt/sign @claims.json > jwt2.txt
+vault read -field=token jwt/sign/test > jwt2.txt
 sleep 3
 
 # We should be able to verify the second JWT, but not the first.
@@ -86,14 +91,10 @@ expect_no_match "$(cat decoded2.txt)" "iat" "should not have 'iat' claim"
 # Keys should have different UUIDs.
 expect_not_equal $(cat decoded.txt | jq '.jti') $(cat decoded2.txt | jq '.jti') "JTI claims should differ"
 
-# Try to write a claim that violates the subject pattern
-if vault write -field=token jwt/sign @bad_claims.json; then
-    echo "Writing a set of claims which did not match the regex should have failed."
-    exit 1
-fi
-
 # Allow 'foo' claim
-vault write -field=allowed_claims jwt/config @allowed_claims.json
-vault write -field=token jwt/sign @claims_foo.json > jwt3.txt
+vault write jwt/claims/foo @claims_foo.json
+vault read -field=token jwt/sign/foo > jwt3.txt
 jwtverify $(cat jwt3.txt) $VAULT_ADDR/v1/jwt/jwks | tee decoded3.txt
 expect_equal "$(cat decoded3.txt | jq '.foo')" '"bar"' "jwt should have 'foo' field set"
+
+
