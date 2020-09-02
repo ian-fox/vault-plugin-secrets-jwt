@@ -1,4 +1,5 @@
 # Vault Plugin: JWT Backend
+[![Go Report Card](https://goreportcard.com/badge/github.com/quintoandar/vault-plugin-secrets-jwt)](https://goreportcard.com/report/github.com/quintoandar/vault-plugin-secrets-jwt)
 ![Build Release](https://github.com/quintoandar/vault-plugin-secrets-jwt/workflows/Build%20Release/badge.svg)
 
 This is a standalone backend plugin for use with [Hashicorp Vault](https://www.github.com/hashicorp/vault).
