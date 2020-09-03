@@ -13,8 +13,6 @@ const (
 	secondUpdatedRotationPeriod = "1h0m0s"
 	updatedTTL                  = "6m0s"
 	newIssuer                   = "new-vault"
-	newAud                      = "aud"
-	newSub                      = "sub"
 )
 
 func TestDefaultConfig(t *testing.T) {

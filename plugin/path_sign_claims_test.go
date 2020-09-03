@@ -96,7 +96,3 @@ func TestSignInvalidPath(t *testing.T) {
 		t.Fatalf("call should have failed")
 	}
 }
-
-type customToken struct {
-	Foo string `json:"foo"`
-}

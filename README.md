@@ -1,6 +1,6 @@
 # Vault Plugin: JWT Backend
-![](https://travis-ci.org/ian-fox/vault-plugin-secrets-jwt.svg?branch=master)
-![](https://goreportcard.com/badge/github.com/ian-fox/vault-plugin-secrets-jwt)
+[![Go Report Card](https://goreportcard.com/badge/github.com/quintoandar/vault-plugin-secrets-jwt)](https://goreportcard.com/report/github.com/quintoandar/vault-plugin-secrets-jwt)
+![Build Release](https://github.com/quintoandar/vault-plugin-secrets-jwt/workflows/Build%20Release/badge.svg)
 
 This is a standalone backend plugin for use with [Hashicorp Vault](https://www.github.com/hashicorp/vault).
 This plugin provides the ability to sign [JSON Web Tokens](https://jwt.io) (JWTs) without ever having the signing keys leave Vault.
