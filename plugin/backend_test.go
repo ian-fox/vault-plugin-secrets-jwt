@@ -31,7 +31,8 @@ func getTestBackend(t *testing.T) (*backend, *logical.Storage) {
 
 	b.clock = &fakeClock{time.Unix(0, 0)}
 	b.uuidGen = &fakeUUIDGenerator{0}
-	b.initialize(context.Background(), &logical.InitializationRequest{Storage: config.StorageView})
+	err = b.initialize(context.Background(), &logical.InitializationRequest{Storage: config.StorageView})
+	assert.NoError(t, err, "Should not error")
 
 	return b, &config.StorageView
 }
@@ -63,6 +64,7 @@ func TestConfigInitialization(t *testing.T) {
 	err = config.StorageView.Put(context.Background(), entry)
 	assert.NoError(t, err, "Should not error")
 
-	b.initialize(context.Background(), &logical.InitializationRequest{Storage: config.StorageView})
+	err = b.initialize(context.Background(), &logical.InitializationRequest{Storage: config.StorageView})
+	assert.NoError(t, err, "Should not error")
 	assert.Equal(t, backendConfig.Issuer, b.config.Issuer, "Backend should have been initialized with config in storage")
 }
