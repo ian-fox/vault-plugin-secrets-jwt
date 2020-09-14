@@ -60,6 +60,7 @@ func makeBackend(BackendUUID string) (*backend, error) {
 			pathClaims(b),
 			pathSignClaims(b),
 		},
+		InitializeFunc: b.initialize,
 	}
 
 	return b, nil

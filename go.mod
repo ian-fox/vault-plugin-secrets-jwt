@@ -12,6 +12,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.5.2
 	github.com/hashicorp/vault/api v1.0.1
 	github.com/hashicorp/vault/sdk v0.1.13
+	github.com/stretchr/testify v1.3.0
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/tools v0.0.0-20191030062658-86caa796c7ab // indirect
 	google.golang.org/api v0.11.0
