@@ -61,7 +61,7 @@ func pathConfig(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConfigWrite(c context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathConfigWrite(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	b.configLock.Lock()
 	defer b.configLock.Unlock()
 
@@ -95,6 +95,15 @@ func (b *backend) pathConfigWrite(c context.Context, r *logical.Request, d *fram
 
 	if newIssuer, ok := d.GetOk(keyIssuer); ok {
 		b.config.Issuer = newIssuer.(string)
+	}
+
+	entry, err := logical.StorageEntryJSON(b.UUID, b.config)
+	if err != nil {
+		return nil, err
+	}
+	err = r.Storage.Put(ctx, entry)
+	if err != nil {
+		return logical.ErrorResponse("Failed to save claim"), err
 	}
 
 	return nonLockingRead(b)

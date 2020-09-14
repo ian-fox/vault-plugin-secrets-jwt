@@ -1,7 +1,10 @@
 package jwtsecrets
 
 import (
+	"context"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Default values for configuration options.
@@ -43,4 +46,19 @@ func DefaultConfig(backendUUID string) *Config {
 	c.SetJTI = DefaultSetJTI
 	c.SetNBF = DefaultSetNBF
 	return c
+}
+
+func readConfig(ctx context.Context, backendUUID string, s logical.Storage) (*Config, error) {
+	entry, err := s.Get(ctx, backendUUID)
+	if err != nil {
+		return nil, err
+	}
+	if entry == nil {
+		return DefaultConfig(backendUUID), nil
+	}
+	c := &Config{}
+	if err := entry.DecodeJSON(c); err != nil {
+		return nil, err
+	}
+	return c, nil
 }

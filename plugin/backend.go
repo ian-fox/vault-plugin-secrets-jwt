@@ -12,6 +12,7 @@ import (
 
 type backend struct {
 	*framework.Backend
+	UUID       string
 	clock      clock
 	config     *Config
 	configLock *sync.RWMutex
@@ -33,15 +34,15 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return b, nil
 }
 
-func makeBackend(backendUUID string) (*backend, error) {
-	var b = &backend{}
+func makeBackend(BackendUUID string) (*backend, error) {
+	var b = &backend{
+		UUID: BackendUUID,
+	}
 
 	b.keysLock = new(sync.RWMutex)
 	b.keys = make([]*signingKey, 0)
 
 	b.configLock = new(sync.RWMutex)
-	b.config = DefaultConfig(backendUUID)
-
 	b.claimsLock = new(sync.RWMutex)
 
 	b.clock = realClock{}
@@ -62,6 +63,15 @@ func makeBackend(backendUUID string) (*backend, error) {
 	}
 
 	return b, nil
+}
+
+func (b *backend) initialize(ctx context.Context, r *logical.InitializationRequest) error {
+	c, err := readConfig(ctx, b.UUID, r.Storage)
+	if err != nil {
+		return err
+	}
+	b.config = c
+	return nil
 }
 
 const backendHelp = `
