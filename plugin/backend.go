@@ -60,6 +60,9 @@ func makeBackend(BackendUUID string) (*backend, error) {
 			pathSignClaims(b),
 			pathSecret(b),
 		},
+		Secrets: []*framework.Secret{
+			secretKey(b),
+		},
 		InitializeFunc: b.initialize,
 	}
 

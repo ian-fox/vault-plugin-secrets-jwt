@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	keyKeys = "keys"
+	keyKeys       = "keys"
+	secretTypeKey = "rsa_key"
 )
 
 type keyStorage struct {
@@ -52,6 +53,23 @@ func pathSecret(b *backend) *framework.Path {
 	}
 }
 
+func secretKey(b *backend) *framework.Secret {
+	return &framework.Secret{
+		Type: secretTypeKey,
+		Fields: map[string]*framework.FieldSchema{
+			"pem": {
+				Type:        framework.TypeString,
+				Description: "pem encoded string. Private key data.",
+			},
+			"id": {
+				Type:        framework.TypeString,
+				Description: "Private key ID.",
+			},
+		},
+		Revoke: b.revokeKey,
+	}
+}
+
 func (b *backend) pathKeysRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	nameRaw, ok := d.GetOk("name")
 	if !ok {
@@ -71,13 +89,16 @@ func (b *backend) pathKeysRead(ctx context.Context, r *logical.Request, d *frame
 		},
 	)
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"pem":    pem,
-			"id":     key.ID,
-			"rotate": key.UseUntil,
-		},
-	}, nil
+	secretD := map[string]interface{}{
+		"pem": pem,
+		"id":  key.ID,
+	}
+	internalD := map[string]interface{}{
+		"request_id": r.ID,
+		"path_name":  name,
+	}
+
+	return b.Secret(secretTypeKey).Response(secretD, internalD), nil
 }
 
 // getKey will return a valid key if one is available, or otherwise generate a new one.
@@ -98,7 +119,7 @@ func (b *backend) getKey(ctx context.Context, name string, r *logical.Request) (
 		}
 		keyStorage.Keys[key.ID] = key
 	}
-	keyStorage.KeyUsage[r.ClientTokenAccessor] = key.ID
+	keyStorage.KeyUsage[r.ID] = key.ID
 	key.UseCount++
 	err = b.saveKeys(ctx, name, keyStorage, s)
 	return key, err
@@ -167,27 +188,35 @@ func (b *backend) getNewKey() (*signingKey, error) {
 	return newKey, nil
 }
 
-func (b *backend) pruneOldKeys(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	//TODO: put in revoke function
+func (b *backend) revokeKey(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	b.keysLock.RLock()
 	defer b.keysLock.RUnlock()
-	nameRaw, ok := d.GetOk("name")
-	if !ok {
-		return logical.ErrorResponse("name is required"), nil
-	}
-	name := nameRaw.(string)
 
-	keyStorage, err := b.getKeyStorage(ctx, name, r.Storage)
+	reqID, ok := r.Secret.InternalData["request_id"]
+	if !ok {
+		return nil, fmt.Errorf("invalid secret, internal data is missing request ID")
+	}
+	name, ok := r.Secret.InternalData["path_name"]
+	if !ok {
+		return nil, fmt.Errorf("invalid secret, internal data is missing path name")
+	}
+
+	keyStorage, err := b.getKeyStorage(ctx, name.(string), r.Storage)
 	if err != nil {
 		return nil, err
 	}
 
-	keyID, ok := keyStorage.KeyUsage[r.ClientTokenAccessor]
+	keyID, ok := keyStorage.KeyUsage[reqID.(string)]
+	delete(keyStorage.KeyUsage, reqID.(string))
 	if !ok {
 		return logical.ErrorResponse("failed to revoke key"), nil
 	}
 	keyStorage.Keys[keyID].UseCount--
-	err = b.saveKeys(ctx, name, keyStorage, r.Storage)
+
+	if keyStorage.Keys[keyID].UseCount == 0 {
+		delete(keyStorage.Keys, keyID)
+	}
+	err = b.saveKeys(ctx, name.(string), keyStorage, r.Storage)
 	if err != nil {
 		return nil, err
 	}
@@ -228,5 +257,6 @@ Get RSA key pair.
 `
 
 const pathKeysHelpDesc = `
-This path will return an RSA key pair. If no key pair previously existed a new one will be created and the usage will be tracked by the token accessor.
+This path will return an RSA key pair. If no key pair previously existed a new one will be created.
+The public key will only be remove after all usages of the private key are revoked.
 `

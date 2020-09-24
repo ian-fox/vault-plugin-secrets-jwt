@@ -71,10 +71,45 @@ func TestGetExistingKey(t *testing.T) {
 	}
 }
 
-func TestGetRotatedKey(t *testing.T) {
-
-}
-
 func TestRevokeKeys(t *testing.T) {
+	b, storage := getTestBackend(t)
 
+	req := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      keysPath("pathC"),
+		Storage:   *storage,
+	}
+
+	respA, err := b.HandleRequest(context.Background(), req)
+	assert.NoError(t, err, "Should not error")
+	assert.NotEmpty(t, respA.Data)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.RevokeOperation,
+		Secret:    respA.Secret,
+		Storage:   *storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatal(resp.Error())
+	}
+
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      keysPath("pathC"),
+		Storage:   *storage,
+	}
+
+	respB, err := b.HandleRequest(context.Background(), req)
+	assert.NoError(t, err, "Should not error")
+	assert.NotEmpty(t, respA.Data)
+
+	if diff := deep.Equal(respA.Data["pem"], respB.Data["pem"]); diff == nil {
+		t.Error("Keys should have been rotated")
+	}
+	if diff := deep.Equal(respA.Data["id"], respB.Data["id"]); diff == nil {
+		t.Error("Keys should have been rotated")
+	}
 }
