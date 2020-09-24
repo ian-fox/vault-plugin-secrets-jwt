@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
@@ -74,9 +75,10 @@ func TestJwks(t *testing.T) {
 		t.Fatalf("JWKS was not a %T", []jose.JSONWebKey{})
 	}
 
-	expectedKeys := b.getPublicKeys().Keys
+	expectedKeys, err := b.getPublicKeys(context.Background(), claimsPathA, *storage)
+	assert.NoError(t, err, "Should not error")
 
-	if len(expectedKeys) == 0 {
+	if len(expectedKeys.Keys) == 0 {
 		t.Fatal("Expected at least one key to be present.")
 	}
 

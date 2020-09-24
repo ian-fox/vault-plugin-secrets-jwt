@@ -40,7 +40,6 @@ func makeBackend(BackendUUID string) (*backend, error) {
 	}
 
 	b.keysLock = new(sync.RWMutex)
-	b.keys = make([]*signingKey, 0)
 
 	b.configLock = new(sync.RWMutex)
 	b.claimsLock = new(sync.RWMutex)
@@ -59,6 +58,7 @@ func makeBackend(BackendUUID string) (*backend, error) {
 			pathJwks(b),
 			pathClaims(b),
 			pathSignClaims(b),
+			pathSecret(b),
 		},
 		InitializeFunc: b.initialize,
 	}

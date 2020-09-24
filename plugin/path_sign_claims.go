@@ -2,10 +2,13 @@ package jwtsecrets
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
@@ -70,7 +73,12 @@ func (b *backend) pathSignClaimsRead(ctx context.Context, r *logical.Request, d 
 		claims["jti"] = jti
 	}
 
-	token, err := b.sign(expiry, claims)
+	key, err := b.getKey(ctx, name, r.Storage)
+	if err != nil {
+		return logical.ErrorResponse("failed to get keys"), nil
+	}
+
+	token, err := sign(key, expiry, claims)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), err
 	}
@@ -85,6 +93,20 @@ func (b *backend) pathSignClaimsRead(ctx context.Context, r *logical.Request, d 
 // claimsPath returns the formated claims path
 func signClaimsPath(name string) string {
 	return fmt.Sprintf("%s/%s", sigClaimsStoragePrefix, name)
+}
+
+func sign(key *signingKey, expiry time.Time, claims map[string]interface{}) (string, error) {
+	sig, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: key.Key}, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", key.ID))
+	if err != nil {
+		return "", errors.New("error signing claims: " + err.Error())
+	}
+
+	token, err := jwt.Signed(sig).Claims(claims).CompactSerialize()
+	if err != nil {
+		return "", errors.New("error serializing jwt: " + err.Error())
+	}
+
+	return token, nil
 }
 
 const pathSignClaimsHelpSyn = `

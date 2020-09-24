@@ -21,10 +21,21 @@ func pathJwks(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathJwksRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathJwksRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, ok := d.GetOk("name")
+	if !ok {
+		return logical.ErrorResponse("name is required"), nil
+	}
+	name := nameRaw.(string)
+
+	keys, err := b.getPublicKeys(ctx, name, r.Storage)
+	if err != nil {
+		return logical.ErrorResponse("failed to get keys"), nil
+	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"keys": b.getPublicKeys().Keys,
+			"keys": keys.Keys,
 		},
 	}, nil
 }
