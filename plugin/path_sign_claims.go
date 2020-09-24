@@ -73,7 +73,7 @@ func (b *backend) pathSignClaimsRead(ctx context.Context, r *logical.Request, d 
 		claims["jti"] = jti
 	}
 
-	key, err := b.getKey(ctx, name, r.Storage)
+	key, err := b.getKey(ctx, name, r)
 	if err != nil {
 		return logical.ErrorResponse("failed to get keys"), nil
 	}
