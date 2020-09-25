@@ -86,11 +86,15 @@ func (b *backend) pathSignWrite(ctx context.Context, r *logical.Request, d *fram
 		return logical.ErrorResponse(err.Error()), err
 	}
 
-	return &logical.Response{
-		Data: map[string]interface{}{
-			"token": token,
-		},
-	}, nil
+	secretD := map[string]interface{}{
+		"token": token,
+	}
+	internalD := map[string]interface{}{
+		"request_id": r.ID,
+		"path_name":  name,
+	}
+
+	return b.Secret(secretTypeKey).Response(secretD, internalD), nil
 }
 
 // signPath returns the formated claims path
