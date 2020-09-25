@@ -232,7 +232,7 @@ func (b *backend) getPublicKeys(ctx context.Context, name string, s logical.Stor
 	}
 
 	jwks := jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, len(b.keys)),
+		Keys: make([]jose.JSONWebKey, len(keyStorage.Keys)),
 	}
 
 	i := 0

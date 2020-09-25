@@ -17,7 +17,6 @@ type backend struct {
 	config     *Config
 	configLock *sync.RWMutex
 	claimsLock *sync.RWMutex
-	keys       []*signingKey
 	keysLock   *sync.RWMutex
 	uuidGen    uuidGenerator
 }

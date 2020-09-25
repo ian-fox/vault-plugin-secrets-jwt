@@ -37,7 +37,11 @@ func getSignedToken(b *backend, storage *logical.Storage, path string, dest inte
 		return fmt.Errorf("error parsing jwt: %s", err)
 	}
 
-	if err = token.Claims(b.keys[0].Key.Public(), dest); err != nil {
+	key, err := b.getKey(context.Background(), path, req)
+	if err != nil {
+		return err
+	}
+	if err = token.Claims(key.Key.Public(), dest); err != nil {
 		return fmt.Errorf("error decoding claims: %s", err)
 	}
 

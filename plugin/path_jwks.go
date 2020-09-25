@@ -2,6 +2,7 @@ package jwtsecrets
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -9,7 +10,13 @@ import (
 
 func pathJwks(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "jwks",
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: "Required. Path name.",
+			},
+		},
+		Pattern: fmt.Sprintf("%s/%s", framework.GenericNameRegex("name"), "jwks"),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathJwksRead,

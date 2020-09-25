@@ -2,6 +2,7 @@ package jwtsecrets
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -16,7 +17,7 @@ func TestEmptyJwks(t *testing.T) {
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "jwks",
+		Path:      "pathA/jwks",
 		Storage:   *storage,
 	}
 
@@ -56,7 +57,7 @@ func TestJwks(t *testing.T) {
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "jwks",
+		Path:      fmt.Sprintf("%s/%s", claimsPathA, "jwks"),
 		Storage:   *storage,
 	}
 
@@ -82,7 +83,7 @@ func TestJwks(t *testing.T) {
 		t.Fatal("Expected at least one key to be present.")
 	}
 
-	if diff := deep.Equal(expectedKeys, typedKeys); diff != nil {
+	if diff := deep.Equal(expectedKeys.Keys, typedKeys); diff != nil {
 		t.Error(diff)
 	}
 }
