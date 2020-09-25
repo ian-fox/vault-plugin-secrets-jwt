@@ -159,7 +159,7 @@ func (b *backend) getKeyStorage(ctx context.Context, name string, s logical.Stor
 func (b *backend) getExistingKey(keyStorage *keyStorage) (*signingKey, error) {
 	now := b.clock.now()
 	for _, v := range keyStorage.Keys {
-		if v.UseUntil.After(now) {
+		if v.UseUntil.Add(-b.config.TokenTTL).After(now) {
 			return v, nil
 		}
 	}

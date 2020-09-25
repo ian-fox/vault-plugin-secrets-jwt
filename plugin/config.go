@@ -9,7 +9,7 @@ import (
 
 // Default values for configuration options.
 const (
-	DefaultKeyRotationPeriod = "15m0s"
+	DefaultKeyRotationPeriod = "6h0m0s"
 	DefaultTokenTTL          = "5m0s"
 	DefaultSetIAT            = true
 	DefaultSetJTI            = true

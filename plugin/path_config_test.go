@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	updatedRotationPeriod       = "5m0s"
+	updatedRotationPeriod       = "15m0s"
 	secondUpdatedRotationPeriod = "1h0m0s"
 	updatedTTL                  = "6m0s"
 	newIssuer                   = "new-vault"
@@ -153,6 +153,21 @@ func TestWriteInvalidConfig(t *testing.T) {
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
+	if err == nil {
+		t.Errorf("Should have errored but got response: %#v", resp)
+	}
+
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config",
+		Storage:   *storage,
+		Data: map[string]interface{}{
+			keyRotationDuration: "1m",
+			keyTokenTTL:         "2m",
+		},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), req)
 	if err == nil {
 		t.Errorf("Should have errored but got response: %#v", resp)
 	}

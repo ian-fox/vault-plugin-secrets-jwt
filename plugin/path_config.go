@@ -2,6 +2,7 @@ package jwtsecrets
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -81,6 +82,10 @@ func (b *backend) pathConfigWrite(ctx context.Context, r *logical.Request, d *fr
 		b.config.TokenTTL = duration
 	}
 
+	if b.config.TokenTTL >= b.config.KeyRotationPeriod {
+		return logical.ErrorResponse("Key will expire before token."), errors.New("tokenTTL larger than keyTTL")
+	}
+
 	if newSetIat, ok := d.GetOk(keySetIAT); ok {
 		b.config.SetIAT = newSetIat.(bool)
 	}
@@ -103,7 +108,7 @@ func (b *backend) pathConfigWrite(ctx context.Context, r *logical.Request, d *fr
 	}
 	err = r.Storage.Put(ctx, entry)
 	if err != nil {
-		return logical.ErrorResponse("Failed to save claim"), err
+		return logical.ErrorResponse("Failed to save configuration"), err
 	}
 
 	return nonLockingRead(b)
