@@ -10,11 +10,12 @@ import (
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
-func getSignedToken(b *backend, storage *logical.Storage, path string, dest interface{}) error {
+func getSignedToken(b *backend, storage *logical.Storage, path string, claims map[string]interface{}, dest interface{}) error {
 	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      signClaimsPath(path),
+		Operation: logical.CreateOperation,
+		Path:      signPath(path),
 		Storage:   *storage,
+		Data:      claims,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -57,12 +58,8 @@ func TestSign(t *testing.T) {
 		},
 	}
 
-	err := writeAndCheckClaims(b, storage, claimsPathA, claims, claims)
-	if err != nil {
-		t.Fatalf("%v\n", err)
-	}
 	var decoded jwt.Claims
-	if err := getSignedToken(b, storage, claimsPathA, &decoded); err != nil {
+	if err := getSignedToken(b, storage, pathA, claims, &decoded); err != nil {
 		t.Fatalf("%v\n", err)
 	}
 
@@ -80,23 +77,5 @@ func TestSign(t *testing.T) {
 
 	if diff := deep.Equal(expectedClaims, decoded); diff != nil {
 		t.Error(diff)
-	}
-}
-
-func TestSignInvalidPath(t *testing.T) {
-	b, storage := getTestBackend(t)
-
-	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      signClaimsPath("non-existent"),
-		Storage:   *storage,
-	}
-
-	resp, err := b.HandleRequest(context.Background(), req)
-	if err != nil {
-		t.Fatalf("%v\n", err)
-	}
-	if !resp.IsError() {
-		t.Fatalf("call should have failed")
 	}
 }

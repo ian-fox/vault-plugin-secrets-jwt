@@ -13,42 +13,45 @@ import (
 )
 
 const (
-	sigClaimsStoragePrefix = "sign"
+	signStoragePrefix = "sign"
 )
 
-func pathSignClaims(b *backend) *framework.Path {
+func pathSign(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: fmt.Sprintf("%s/%s", sigClaimsStoragePrefix, framework.GenericNameRegex("name")),
+		Pattern: fmt.Sprintf("%s/%s", framework.GenericNameRegex("name"), signStoragePrefix),
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
 				Description: "Required. Name of the custom claims set.",
 			},
-		},
-		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.ReadOperation: &framework.PathOperation{
-				Callback: b.pathSignClaimsRead,
+			"claims": {
+				Type:        framework.TypeMap,
+				Description: `JSON claim set to sign.`,
 			},
 		},
-		HelpSynopsis:    pathSignClaimsHelpSyn,
-		HelpDescription: pathSignClaimsHelpDesc,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathSignWrite,
+			},
+		},
+		HelpSynopsis:    pathSignHelpSyn,
+		HelpDescription: pathSignHelpDesc,
 	}
 }
 
-func (b *backend) pathSignClaimsRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathSignWrite(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	nameRaw, ok := d.GetOk("name")
 	if !ok {
 		return logical.ErrorResponse("name is required"), nil
 	}
 	name := nameRaw.(string)
-
-	claims, err := b.getClaims(ctx, name, r.Storage)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), err
+	rawClaims, ok := d.GetOk("claims")
+	if !ok {
+		return logical.ErrorResponse("no claims provided"), logical.ErrInvalidRequest
 	}
-
-	if claims == nil {
-		return logical.ErrorResponse("claims not set"), err
+	claims, ok := rawClaims.(map[string]interface{})
+	if !ok {
+		return logical.ErrorResponse("claims not a map"), logical.ErrInvalidRequest
 	}
 
 	config := *b.config
@@ -90,9 +93,9 @@ func (b *backend) pathSignClaimsRead(ctx context.Context, r *logical.Request, d 
 	}, nil
 }
 
-// claimsPath returns the formated claims path
-func signClaimsPath(name string) string {
-	return fmt.Sprintf("%s/%s", sigClaimsStoragePrefix, name)
+// signPath returns the formated claims path
+func signPath(name string) string {
+	return fmt.Sprintf("%s/%s", name, signStoragePrefix)
 }
 
 func sign(key *signingKey, expiry time.Time, claims map[string]interface{}) (string, error) {
@@ -109,10 +112,19 @@ func sign(key *signingKey, expiry time.Time, claims map[string]interface{}) (str
 	return token, nil
 }
 
-const pathSignClaimsHelpSyn = `
-Signs a set of preconfigured claims.
+const pathSignHelpSyn = `
+Signs a set of claims with the private the of the specified path.
 `
 
-const pathSignClaimsHelpDesc = `
-Signs a set of preconfigured claims.
+const pathSignHelpDesc = `
+Signs a set of claims with the private the of the specified path. Example:
+
+vault write jwt/key_path/sign @claims.json
+
+claims.json:
+{
+	"claims": {
+			"sub": "Zapp Brannigan"
+	}
+}
 `

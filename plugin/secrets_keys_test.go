@@ -10,6 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	pathA = "pathA"
+	pathB = "pathB"
+)
+
 func TestGetNewKey(t *testing.T) {
 	b, storage := getTestBackend(t)
 

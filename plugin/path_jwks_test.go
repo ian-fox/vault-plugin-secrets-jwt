@@ -46,18 +46,14 @@ func TestJwks(t *testing.T) {
 		},
 	}
 
-	err := writeAndCheckClaims(b, storage, claimsPathA, claims, claims)
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
 	var decoded jwt.Claims
-	if err := getSignedToken(b, storage, claimsPathA, &decoded); err != nil {
+	if err := getSignedToken(b, storage, pathA, claims, &decoded); err != nil {
 		t.Fatalf("%v\n", err)
 	}
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      fmt.Sprintf("%s/%s", claimsPathA, "jwks"),
+		Path:      fmt.Sprintf("%s/%s", pathA, "jwks"),
 		Storage:   *storage,
 	}
 
@@ -76,7 +72,7 @@ func TestJwks(t *testing.T) {
 		t.Fatalf("JWKS was not a %T", []jose.JSONWebKey{})
 	}
 
-	expectedKeys, err := b.getPublicKeys(context.Background(), claimsPathA, *storage)
+	expectedKeys, err := b.getPublicKeys(context.Background(), pathA, *storage)
 	assert.NoError(t, err, "Should not error")
 
 	if len(expectedKeys.Keys) == 0 {

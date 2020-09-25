@@ -46,7 +46,7 @@ vault plugin register -sha256 $SHASUM vault-plugin-secrets-jwt
 vault secrets enable -path=jwt vault-plugin-secrets-jwt
 
 # Change the expiry time and make a pattern to check subjects against
-vault write jwt/config "key_ttl=2s" "jwt_ttl=3s"
+vault write jwt/config "key_ttl=2m" "jwt_ttl=3s"
 
 # Create custom claims
 vault write jwt/claims/test @claims.json
