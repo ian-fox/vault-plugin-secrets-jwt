@@ -184,3 +184,31 @@ func TestRotateKeys(t *testing.T) {
 		t.Error("Keys should have been rotated")
 	}
 }
+
+func TestDeleteKey(t *testing.T) {
+	b, storage := getTestBackend(t)
+
+	req := &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      keysPath("pathA"),
+		Storage:   *storage,
+	}
+
+	respA, err := b.HandleRequest(context.Background(), req)
+	assert.NoError(t, err, "Should not error")
+	assert.NotEmpty(t, respA.Data)
+	l, _ := req.Storage.List(context.Background(), "pathA")
+	assert.NotEmpty(t, l)
+
+	req = &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      keysPath("pathA"),
+		Storage:   *storage,
+	}
+
+	respB, err := b.HandleRequest(context.Background(), req)
+	assert.NoError(t, err, "Should not error")
+	assert.Empty(t, respB)
+	l, _ = req.Storage.List(context.Background(), "pathA")
+	assert.Empty(t, l)
+}

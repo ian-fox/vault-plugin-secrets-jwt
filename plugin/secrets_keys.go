@@ -47,6 +47,9 @@ func pathSecret(b *backend) *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathKeysRead,
 			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathKeysDelete,
+			},
 		},
 		HelpSynopsis:    pathKeysHelpSyn,
 		HelpDescription: pathKeysHelpDesc,
@@ -68,6 +71,20 @@ func secretKey(b *backend) *framework.Secret {
 		},
 		Revoke: b.revokeKey,
 	}
+}
+
+func (b *backend) pathKeysDelete(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, ok := d.GetOk("name")
+	if !ok {
+		return logical.ErrorResponse("name is required"), nil
+	}
+	name := nameRaw.(string)
+
+	err := r.Storage.Delete(ctx, keysPath(name))
+	if err != nil {
+		return logical.ErrorResponse("Failed to delete keys"), err
+	}
+	return nil, nil
 }
 
 func (b *backend) pathKeysRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
