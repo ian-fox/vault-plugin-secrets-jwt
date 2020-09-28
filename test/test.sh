@@ -92,7 +92,7 @@ else
 fi
 
 # Check if jwks/test has two public keys
-if $(curl -s $VAULT_ADDR/v1/jwt/jwks/test | jq '.data.keys | length') -ne 2; then
+if [ $(curl -s $VAULT_ADDR/v1/jwt/jwks/test | jq '.data.keys | length') -ne 2 ]; then
    echo "missing public keys"
    exit 1
 fi
@@ -101,9 +101,7 @@ fi
 vault lease revoke -prefix jwt/test
 
 # Check that jwks/test has no public keys
-curl $VAULT_ADDR/v1/jwt/jwks/test
-
-if $(curl -s $VAULT_ADDR/v1/jwt/jwks/test | jq '.data.keys | length') -ne 0; then
+if [ $(curl -s $VAULT_ADDR/v1/jwt/jwks/test | jq '.data.keys | length') -ne 0 ]; then
    echo "pulbic keys not revoked"
    exit 1
 fi
