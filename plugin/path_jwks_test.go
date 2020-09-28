@@ -2,7 +2,6 @@ package jwtsecrets
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -17,7 +16,7 @@ func TestEmptyJwks(t *testing.T) {
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "pathA/jwks",
+		Path:      "jwks/pathA",
 		Storage:   *storage,
 	}
 
@@ -47,13 +46,13 @@ func TestJwks(t *testing.T) {
 	}
 
 	var decoded jwt.Claims
-	if err := getSignedToken(b, storage, pathA, claims, &decoded); err != nil {
+	if err := getSignedToken(b, storage, "pathA", claims, &decoded); err != nil {
 		t.Fatalf("%v\n", err)
 	}
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      fmt.Sprintf("%s/%s", pathA, "jwks"),
+		Path:      "jwks/pathA",
 		Storage:   *storage,
 	}
 
@@ -72,7 +71,7 @@ func TestJwks(t *testing.T) {
 		t.Fatalf("JWKS was not a %T", []jose.JSONWebKey{})
 	}
 
-	expectedKeys, err := b.getPublicKeys(context.Background(), pathA, *storage)
+	expectedKeys, err := b.getPublicKeys(context.Background(), "pathA", *storage)
 	assert.NoError(t, err, "Should not error")
 
 	if len(expectedKeys.Keys) == 0 {

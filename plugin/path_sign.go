@@ -45,7 +45,7 @@ func pathSign(b *backend) *framework.Path {
 
 func secretToken(b *backend) *framework.Secret {
 	return &framework.Secret{
-		Type: secretTypeKey,
+		Type: secretTypeToken,
 		Fields: map[string]*framework.FieldSchema{
 			"token": {
 				Type:        framework.TypeString,
@@ -111,7 +111,7 @@ func (b *backend) pathSignWrite(ctx context.Context, r *logical.Request, d *fram
 		"path_name": name,
 	}
 
-	return b.Secret(secretTypeKey).Response(secretD, internalD), nil
+	return b.Secret(secretTypeToken).Response(secretD, internalD), nil
 }
 
 // signPath returns the formated claims path

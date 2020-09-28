@@ -69,7 +69,7 @@ func TestSign(t *testing.T) {
 	}
 
 	var decoded jwt.Claims
-	if err := getSignedToken(b, storage, pathA, claims, &decoded); err != nil {
+	if err := getSignedToken(b, storage, "pathA", claims, &decoded); err != nil {
 		t.Fatalf("%v\n", err)
 	}
 

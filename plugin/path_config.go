@@ -9,12 +9,11 @@ import (
 )
 
 const (
-	keyRotationDuration = "key_ttl"
-	keyTokenTTL         = "jwt_ttl"
-	keySetIAT           = "set_iat"
-	keySetJTI           = "set_jti"
-	keySetNBF           = "set_nbf"
-	keyIssuer           = "issuer"
+	keyTokenTTL = "jwt_ttl"
+	keySetIAT   = "set_iat"
+	keySetJTI   = "set_jti"
+	keySetNBF   = "set_nbf"
+	keyIssuer   = "issuer"
 )
 
 func pathConfig(b *backend) *framework.Path {
