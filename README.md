@@ -61,11 +61,11 @@ Example
 curl <vault_addr>/v1/jwt/<key_name>/jwks
 ```
 
-### PEM
+### Keys
 
-Returns the generated private key.
+Returns the generated private key, in PEM format.
 
 Example
 ```
-vault read jwt/<key_name>/pem
+vault read jwt/<key_name>/keys
 ```

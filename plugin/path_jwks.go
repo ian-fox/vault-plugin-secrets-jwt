@@ -37,6 +37,7 @@ func (b *backend) pathJwksRead(ctx context.Context, r *logical.Request, d *frame
 
 	keys, err := b.getPublicKeys(ctx, name, r.Storage)
 	if err != nil {
+		b.Logger().Error("Failed to get jwks.", "error", err)
 		return logical.ErrorResponse("failed to get keys"), nil
 	}
 

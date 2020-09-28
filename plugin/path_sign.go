@@ -14,6 +14,7 @@ import (
 
 const (
 	signStoragePrefix = "sign"
+	secretTypeToken   = "jwt_token"
 )
 
 func pathSign(b *backend) *framework.Path {
@@ -33,9 +34,25 @@ func pathSign(b *backend) *framework.Path {
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathSignWrite,
 			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathSignWrite,
+			},
 		},
 		HelpSynopsis:    pathSignHelpSyn,
 		HelpDescription: pathSignHelpDesc,
+	}
+}
+
+func secretToken(b *backend) *framework.Secret {
+	return &framework.Secret{
+		Type: secretTypeKey,
+		Fields: map[string]*framework.FieldSchema{
+			"token": {
+				Type:        framework.TypeString,
+				Description: "signed jwt token with the provided claims.",
+			},
+		},
+		Revoke: b.revokeKey,
 	}
 }
 

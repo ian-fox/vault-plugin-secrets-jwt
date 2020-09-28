@@ -120,8 +120,8 @@ func (b *backend) pathKeysRead(ctx context.Context, r *logical.Request, d *frame
 
 // getKey will return a valid key if one is available, or otherwise generate a new one.
 func (b *backend) getKey(ctx context.Context, name string, r *logical.Request) (*signingKey, error) {
-	b.keysLock.RLock()
-	defer b.keysLock.RUnlock()
+	b.keysLock.Lock()
+	defer b.keysLock.Unlock()
 
 	s := r.Storage
 	keyStorage, err := b.getKeyStorage(ctx, name, s)
@@ -139,6 +139,7 @@ func (b *backend) getKey(ctx context.Context, name string, r *logical.Request) (
 	keyStorage.KeyUsage[r.ID] = key.ID
 	key.UseCount++
 	err = b.saveKeys(ctx, name, keyStorage, s)
+	b.Logger().Info("Added key usage", "KeyID", key.ID, "RequestId", r.ID, "Count", key.UseCount) //TODO: Change to debug
 	return key, err
 }
 
@@ -206,8 +207,8 @@ func (b *backend) getNewKey() (*signingKey, error) {
 }
 
 func (b *backend) revokeKey(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.keysLock.RLock()
-	defer b.keysLock.RUnlock()
+	b.keysLock.Lock()
+	defer b.keysLock.Lock()
 
 	reqID, ok := r.Secret.InternalData["request_id"]
 	if !ok {
@@ -228,17 +229,25 @@ func (b *backend) revokeKey(ctx context.Context, r *logical.Request, d *framewor
 	if !ok {
 		return logical.ErrorResponse("failed to revoke key"), nil
 	}
-	keyStorage.Keys[keyID].UseCount--
+	key := keyStorage.Keys[keyID]
+	key.UseCount--
 
-	if keyStorage.Keys[keyID].UseCount == 0 {
+	b.Logger().Info("Removed key usage.", "KeyID", key.ID, "RequestId", reqID, "Count", key.UseCount) //TODO: Change to debug
+	if key.UseCount == 0 {
+		b.Logger().Info("Revoking key", "keyID", keyID)
 		delete(keyStorage.Keys, keyID)
 	}
 	err = b.saveKeys(ctx, name.(string), keyStorage, r.Storage)
 	if err != nil {
+		b.Logger().Error("Failed to save key revocation.", "error", err)
 		return nil, err
 	}
-
-	return nil, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"key_id": key.ID,
+			"usage":  key.UseCount,
+		},
+	}, nil
 }
 
 // GetPublicKeys returns a set of JSON Web Keys.

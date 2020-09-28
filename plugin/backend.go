@@ -48,7 +48,7 @@ func makeBackend(BackendUUID string) (*backend, error) {
 		BackendType: logical.TypeLogical,
 		Help:        strings.TrimSpace(backendHelp),
 		PathsSpecial: &logical.Paths{
-			Unauthenticated: []string{"jwks"},
+			Unauthenticated: []string{"test/jwks"},
 		},
 		Paths: []*framework.Path{
 			pathConfig(b),
@@ -58,6 +58,7 @@ func makeBackend(BackendUUID string) (*backend, error) {
 		},
 		Secrets: []*framework.Secret{
 			secretKey(b),
+			secretToken(b),
 		},
 		InitializeFunc: b.initialize,
 	}
