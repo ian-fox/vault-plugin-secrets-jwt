@@ -51,6 +51,9 @@ vault write jwt/<key_name>/sign @claims.json
 }
 ```
 
+**WARNING**: This is intended for test purpose only. Each token will be signed with a newly generated pair pair that is revoked when the secret is revoked.
+
+
 ### Keys
 
 Returns the generated private key, in base64 encoded PEM format.
@@ -59,6 +62,8 @@ Example
 ```
 vault read jwt/<key_name>/keys
 ```
+
+ <vault_addr>/v1/jwt/jwks/<key_name>
 
 ### JWKS
 
