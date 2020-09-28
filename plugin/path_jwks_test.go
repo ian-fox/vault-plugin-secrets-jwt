@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/square/go-jose.v2"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
@@ -15,7 +16,7 @@ func TestEmptyJwks(t *testing.T) {
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "jwks",
+		Path:      "jwks/pathA",
 		Storage:   *storage,
 	}
 
@@ -44,18 +45,14 @@ func TestJwks(t *testing.T) {
 		},
 	}
 
-	err := writeAndCheckClaims(b, storage, claimsPathA, claims, claims)
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
 	var decoded jwt.Claims
-	if err := getSignedToken(b, storage, claimsPathA, &decoded); err != nil {
+	if err := getSignedToken(b, storage, "pathA", claims, &decoded); err != nil {
 		t.Fatalf("%v\n", err)
 	}
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      "jwks",
+		Path:      "jwks/pathA",
 		Storage:   *storage,
 	}
 
@@ -74,13 +71,14 @@ func TestJwks(t *testing.T) {
 		t.Fatalf("JWKS was not a %T", []jose.JSONWebKey{})
 	}
 
-	expectedKeys := b.getPublicKeys().Keys
+	expectedKeys, err := b.getPublicKeys(context.Background(), "pathA", *storage)
+	assert.NoError(t, err, "Should not error")
 
-	if len(expectedKeys) == 0 {
+	if len(expectedKeys.Keys) == 0 {
 		t.Fatal("Expected at least one key to be present.")
 	}
 
-	if diff := deep.Equal(expectedKeys, typedKeys); diff != nil {
+	if diff := deep.Equal(expectedKeys.Keys, typedKeys); diff != nil {
 		t.Error(diff)
 	}
 }

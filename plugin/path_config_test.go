@@ -9,10 +9,8 @@ import (
 )
 
 const (
-	updatedRotationPeriod       = "5m0s"
-	secondUpdatedRotationPeriod = "1h0m0s"
-	updatedTTL                  = "6m0s"
-	newIssuer                   = "new-vault"
+	updatedTTL = "6m0s"
+	newIssuer  = "new-vault"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -29,12 +27,7 @@ func TestDefaultConfig(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	rotationPeriod := resp.Data[keyRotationDuration].(string)
 	tokenTTL := resp.Data[keyTokenTTL].(string)
-
-	if diff := deep.Equal(DefaultKeyRotationPeriod, rotationPeriod); diff != nil {
-		t.Error(diff)
-	}
 
 	if diff := deep.Equal(DefaultTokenTTL, tokenTTL); diff != nil {
 		t.Error(diff)
@@ -49,7 +42,11 @@ func TestWriteConfig(t *testing.T) {
 		Path:      "config",
 		Storage:   *storage,
 		Data: map[string]interface{}{
-			keyRotationDuration: updatedRotationPeriod,
+			keyTokenTTL: updatedTTL,
+			keySetIAT:   false,
+			keySetJTI:   false,
+			keySetNBF:   false,
+			keyIssuer:   newIssuer,
 		},
 	}
 
@@ -58,66 +55,11 @@ func TestWriteConfig(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	rotationPeriod := resp.Data[keyRotationDuration].(string)
 	tokenTTL := resp.Data[keyTokenTTL].(string)
 	setIAT := resp.Data[keySetIAT].(bool)
 	setJTI := resp.Data[keySetJTI].(bool)
 	setNBF := resp.Data[keySetNBF].(bool)
 	issuer := resp.Data[keyIssuer].(string)
-
-	if diff := deep.Equal(updatedRotationPeriod, rotationPeriod); diff != nil {
-		t.Error("failed to update rotation period:", diff)
-	}
-
-	if diff := deep.Equal(DefaultTokenTTL, tokenTTL); diff != nil {
-		t.Error("expiry period should be unchanged:", diff)
-	}
-
-	if diff := deep.Equal(DefaultSetIAT, setIAT); diff != nil {
-		t.Error("set_iat should be unchanged:", diff)
-	}
-
-	if diff := deep.Equal(DefaultSetJTI, setJTI); diff != nil {
-		t.Error("set_jti should be unchanged:", diff)
-	}
-
-	if diff := deep.Equal(DefaultSetNBF, setNBF); diff != nil {
-		t.Error("set_nbf should be unchanged:", diff)
-	}
-
-	if diff := deep.Equal(testIssuer, issuer); diff != nil {
-		t.Error("unexpected issuer:", diff)
-	}
-
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "config",
-		Storage:   *storage,
-		Data: map[string]interface{}{
-			keyRotationDuration: secondUpdatedRotationPeriod,
-			keyTokenTTL:         updatedTTL,
-			keySetIAT:           false,
-			keySetJTI:           false,
-			keySetNBF:           false,
-			keyIssuer:           newIssuer,
-		},
-	}
-
-	resp, err = b.HandleRequest(context.Background(), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
-
-	rotationPeriod = resp.Data[keyRotationDuration].(string)
-	tokenTTL = resp.Data[keyTokenTTL].(string)
-	setIAT = resp.Data[keySetIAT].(bool)
-	setJTI = resp.Data[keySetJTI].(bool)
-	setNBF = resp.Data[keySetNBF].(bool)
-	issuer = resp.Data[keyIssuer].(string)
-
-	if diff := deep.Equal(secondUpdatedRotationPeriod, rotationPeriod); diff != nil {
-		t.Error("failed to update rotation period:", diff)
-	}
 
 	if diff := deep.Equal(updatedTTL, tokenTTL); diff != nil {
 		t.Error("expiry period should be unchanged:", diff)
@@ -148,7 +90,7 @@ func TestWriteInvalidConfig(t *testing.T) {
 		Path:      "config",
 		Storage:   *storage,
 		Data: map[string]interface{}{
-			keyRotationDuration: "not a real duration",
+			keyTokenTTL: "not a real duration",
 		},
 	}
 

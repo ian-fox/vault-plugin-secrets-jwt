@@ -30,47 +30,40 @@ Options
 |key|description|
 |---|-----------|
 key_ttl|Duration before a key stops signing new tokens and a new one is generated. After this period the public key will still be available to verify JWTs.
-jwt_ttl|Duration before a token expires.
+jwt_ttl|Duration before a tokens created in the (/<key_name>/sign endpoint) expires.
 set_iat|Whether or not the backend should generate and set the 'iat' claim.
 set_jti|Whether or not the backend should generate and set the 'jti' claim.
 set_nbf|Whether or not the backend should generate and set the 'nbf' claim.
 issuer|Value to set as the 'iss' claim. Claim omitted if empty.
 
+### Sign
 
-### Claims
-
-Set claims for a given path.
+Signs an JWT with the claims set on the custom path.
 
 Example
-
-```bash
-vault write jwt/claims/test @claims.json
 ```
-
-Payload Example
+vault write jwt/<key_name>/sign @claims.json
+```
 
 ```json
 {
-    "claims": {
-        "sub": "Zapp Brannigan"
-    }
+  "sub": "Zapp Brannigan"
 }
 ```
 
-Options
+**WARNING**: This is intended for test purpose only. Each token will be signed with a newly generated pair pair that is revoked when the secret is revoked.
 
-|key|description|
-|---|-----------|
-|claims| Map of custom claims.|
 
-### Sign
+### Keys
 
-Signs an JWt with the claims set on the custom path.
+Returns the generated private key, in base64 encoded PEM format.
 
 Example
 ```
-vault read jwt/claims/test
+vault read jwt/<key_name>/keys
 ```
+
+ <vault_addr>/v1/jwt/jwks/<key_name>
 
 ### JWKS
 
@@ -79,5 +72,7 @@ Exposes the public key on an unauthenticated endpoint.
 Example
 
 ```bash
-curl <vault_addr>/v1/jwt/jwks
+curl <vault_addr>/v1/jwt/jwks/<key_name>
 ```
+
+**WARNING**: In the JWKS path the key is at the end of the URL so and jwks key (jwks/*) is public.

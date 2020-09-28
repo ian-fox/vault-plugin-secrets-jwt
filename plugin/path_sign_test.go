@@ -7,14 +7,16 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
-func getSignedToken(b *backend, storage *logical.Storage, path string, dest interface{}) error {
+func getSignedToken(b *backend, storage *logical.Storage, path string, claims map[string]interface{}, dest interface{}) error {
 	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      signClaimsPath(path),
+		Operation: logical.CreateOperation,
+		Path:      signPath(path),
 		Storage:   *storage,
+		Data:      claims,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
@@ -37,7 +39,20 @@ func getSignedToken(b *backend, storage *logical.Storage, path string, dest inte
 		return fmt.Errorf("error parsing jwt: %s", err)
 	}
 
-	if err = token.Claims(b.keys[0].Key.Public(), dest); err != nil {
+	keys, err := b.getPublicKeys(context.Background(), path, *storage)
+	if err != nil {
+		return err
+	}
+
+	var kid string
+	for _, header := range token.Headers {
+		if header.KeyID != "" {
+			kid = header.KeyID
+			break
+		}
+	}
+
+	if err = token.Claims(keys.Key(kid)[0], dest); err != nil {
 		return fmt.Errorf("error decoding claims: %s", err)
 	}
 
@@ -53,12 +68,8 @@ func TestSign(t *testing.T) {
 		},
 	}
 
-	err := writeAndCheckClaims(b, storage, claimsPathA, claims, claims)
-	if err != nil {
-		t.Fatalf("%v\n", err)
-	}
 	var decoded jwt.Claims
-	if err := getSignedToken(b, storage, claimsPathA, &decoded); err != nil {
+	if err := getSignedToken(b, storage, "pathA", claims, &decoded); err != nil {
 		t.Fatalf("%v\n", err)
 	}
 
@@ -79,20 +90,38 @@ func TestSign(t *testing.T) {
 	}
 }
 
-func TestSignInvalidPath(t *testing.T) {
+func TestRevokeToken(t *testing.T) {
 	b, storage := getTestBackend(t)
 
+	claims := map[string]interface{}{
+		"claims": map[string]interface{}{
+			"aud": "Zapp Brannigan",
+		},
+	}
+
 	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      signClaimsPath("non-existent"),
+		Operation: logical.CreateOperation,
+		Path:      signPath("pathF"),
 		Storage:   *storage,
+		Data:      claims,
 	}
 
 	resp, err := b.HandleRequest(context.Background(), req)
+	assert.NoError(t, err, "Should not error")
+	assert.NotEmpty(t, resp.Data)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.RevokeOperation,
+		Secret:    resp.Secret,
+		Storage:   *storage,
+	})
 	if err != nil {
-		t.Fatalf("%v\n", err)
+		t.Fatal(err)
 	}
-	if !resp.IsError() {
-		t.Fatalf("call should have failed")
+	if resp != nil && resp.IsError() {
+		t.Fatal(resp.Error())
 	}
+
+	l, _ := req.Storage.List(context.Background(), "pathF")
+	assert.Empty(t, l)
 }

@@ -46,18 +46,14 @@ vault plugin register -sha256 $SHASUM vault-plugin-secrets-jwt
 vault secrets enable -path=jwt vault-plugin-secrets-jwt
 
 # Change the expiry time and make a pattern to check subjects against
-vault write jwt/config "key_ttl=2s" "jwt_ttl=3s"
-
-# Create custom claims
-vault write jwt/claims/test @claims.json
-claims=$(vault read jwt/claims/test/ -format=json)
-expect_equal "$(echo $claims | jq '.data')" "$(cat claims.json | jq .)" "read claims do not match written ones"
+vault write jwt/config "key_ttl=2m" "jwt_ttl=3s"
 
 # Create a token
-vault read -field=token jwt/sign/test > jwt1.txt
+vault write -field=token jwt/test/sign @claims.json > jwt1.txt
 
 # Check that the token is as we expect
-jwtverify $(cat jwt1.txt) $VAULT_ADDR/v1/jwt/jwks | tee decoded.txt
+jwtverify $(cat jwt1.txt) $VAULT_ADDR/v1/jwt/jwks/test | tee decoded.txt
+
 expect_equal "$(cat decoded.txt | jq '.sub')" '"Zapp Brannigan"' "Wrong subject"
 expect_match $(cat decoded.txt | jq '.exp') "[0-9]+" "Invalid 'exp' claim"
 expect_match $(cat decoded.txt | jq '.iat') "[0-9]+" "Invalid 'iat' claim"
@@ -71,19 +67,10 @@ if [[ "(( EXP_TIME - IAT_TIME ))" -ne 3 ]]; then
 fi
 
 # Wait and generate a second jwt
-sleep 3
 vault write jwt/config "set_iat=false"
-vault read -field=token jwt/sign/test > jwt2.txt
-sleep 3
+vault write -field=token jwt/test/sign @claims.json > jwt2.txt
 
-# We should be able to verify the second JWT, but not the first.
-jwtverify $(cat jwt2.txt) $VAULT_ADDR/v1/jwt/jwks | tee decoded2.txt
-if ! jwtverify $(cat jwt1.txt) $VAULT_ADDR/v1/jwt/jwks; then
-    echo "Key rotated successfully."
-else
-    echo "Key rotation failed, first JWT still valid."
-    exit 1
-fi
+jwtverify $(cat jwt2.txt) $VAULT_ADDR/v1/jwt/jwks/test | tee decoded2.txt
 
 # Second key should not have an iat claim
 expect_no_match "$(cat decoded2.txt)" "iat" "should not have 'iat' claim"
@@ -92,9 +79,29 @@ expect_no_match "$(cat decoded2.txt)" "iat" "should not have 'iat' claim"
 expect_not_equal $(cat decoded.txt | jq '.jti') $(cat decoded2.txt | jq '.jti') "JTI claims should differ"
 
 # Allow 'foo' claim
-vault write jwt/claims/foo @claims_foo.json
-vault read -field=token jwt/sign/foo > jwt3.txt
-jwtverify $(cat jwt3.txt) $VAULT_ADDR/v1/jwt/jwks | tee decoded3.txt
+vault write -field=token jwt/foo/sign @claims_foo.json > jwt3.txt
+jwtverify $(cat jwt3.txt) $VAULT_ADDR/v1/jwt/jwks/foo | tee decoded3.txt
 expect_equal "$(cat decoded3.txt | jq '.foo')" '"bar"' "jwt should have 'foo' field set"
 
+# jwt3 must not be verified on the /jwt/test path
+if ! jwtverify $(cat jwt3.txt) $VAULT_ADDR/v1/jwt/jwks/test; then
+    echo "jwt3 is not valid on the '/jwt/test' path "
+else
+    echo "jwt3 is valid on the '/jwt/test' path but should only be valid on the '/jwt/foo' path"
+    exit 1
+fi
 
+# Check if jwks/test has two public keys
+if [ $(curl -s $VAULT_ADDR/v1/jwt/jwks/test | jq '.data.keys | length') -ne 2 ]; then
+   echo "missing public keys"
+   exit 1
+fi
+
+# Revoke
+vault lease revoke -prefix jwt/test
+
+# Check that jwks/test has no public keys
+if [ $(curl -s $VAULT_ADDR/v1/jwt/jwks/test | jq '.data.keys | length') -ne 0 ]; then
+   echo "pulbic keys not revoked"
+   exit 1
+fi

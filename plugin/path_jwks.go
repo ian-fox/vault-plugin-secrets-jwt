@@ -2,6 +2,7 @@ package jwtsecrets
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -9,7 +10,13 @@ import (
 
 func pathJwks(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: "jwks",
+		Fields: map[string]*framework.FieldSchema{
+			"name": {
+				Type:        framework.TypeString,
+				Description: "Required. Path name.",
+			},
+		},
+		Pattern: fmt.Sprintf("%s/%s", "jwks", framework.GenericNameRegex("name")),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathJwksRead,
@@ -21,10 +28,22 @@ func pathJwks(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathJwksRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathJwksRead(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, ok := d.GetOk("name")
+	if !ok {
+		return logical.ErrorResponse("name is required"), nil
+	}
+	name := nameRaw.(string)
+
+	keys, err := b.getPublicKeys(ctx, name, r.Storage)
+	if err != nil {
+		b.Logger().Error("Failed to get jwks.", "error", err)
+		return logical.ErrorResponse("failed to get keys"), nil
+	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"keys": b.getPublicKeys().Keys,
+			"keys": keys.Keys,
 		},
 	}, nil
 }
