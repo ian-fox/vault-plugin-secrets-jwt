@@ -90,3 +90,20 @@ else
     echo "jwt3 is valid on the '/jwt/test' path but should only be valid on the '/jwt/foo' path"
     exit 1
 fi
+
+# Check if jwks/test has two public keys
+if $(curl -s $VAULT_ADDR/v1/jwt/jwks/test | jq '.data.keys | length') -ne 2; then
+   echo "missing public keys"
+   exit 1
+fi
+
+# Revoke
+vault lease revoke -prefix jwt/test
+
+# Check that jwks/test has no public keys
+curl $VAULT_ADDR/v1/jwt/jwks/test
+
+if $(curl -s $VAULT_ADDR/v1/jwt/jwks/test | jq '.data.keys | length') -ne 0; then
+   echo "pulbic keys not revoked"
+   exit 1
+fi

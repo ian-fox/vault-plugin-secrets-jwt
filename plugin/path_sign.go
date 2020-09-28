@@ -107,8 +107,8 @@ func (b *backend) pathSignWrite(ctx context.Context, r *logical.Request, d *fram
 		"token": token,
 	}
 	internalD := map[string]interface{}{
-		"request_id": r.ID,
-		"path_name":  name,
+		"key_id":    key.ID,
+		"path_name": name,
 	}
 
 	return b.Secret(secretTypeKey).Response(secretD, internalD), nil

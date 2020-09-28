@@ -160,7 +160,7 @@ func (b *backend) getNewKey() (*signingKey, error) {
 func (b *backend) revokeKey(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	keyID, ok := r.Secret.InternalData["key_id"]
 	if !ok {
-		return nil, fmt.Errorf("invalid secret, internal data is missing request ID")
+		return nil, fmt.Errorf("invalid secret, internal data is missing key ID")
 	}
 	name, ok := r.Secret.InternalData["path_name"]
 	if !ok {

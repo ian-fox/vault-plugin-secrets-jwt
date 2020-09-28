@@ -15,7 +15,7 @@ RUN go install test/jwtverify.go
 
 # Test environment
 FROM alpine
-RUN apk add bash jq
+RUN apk add bash jq curl
 COPY --from=vault-installer /vault /usr/local/bin/
 COPY test/config.hcl /vault/
 COPY test/testdata/* test/test.sh /test/

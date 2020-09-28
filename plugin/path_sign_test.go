@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
 	"gopkg.in/square/go-jose.v2/jwt"
 )
 
@@ -87,4 +88,40 @@ func TestSign(t *testing.T) {
 	if diff := deep.Equal(expectedClaims, decoded); diff != nil {
 		t.Error(diff)
 	}
+}
+
+func TestRevokeToken(t *testing.T) {
+	b, storage := getTestBackend(t)
+
+	claims := map[string]interface{}{
+		"claims": map[string]interface{}{
+			"aud": "Zapp Brannigan",
+		},
+	}
+
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      signPath("pathF"),
+		Storage:   *storage,
+		Data:      claims,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), req)
+	assert.NoError(t, err, "Should not error")
+	assert.NotEmpty(t, resp.Data)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.RevokeOperation,
+		Secret:    resp.Secret,
+		Storage:   *storage,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp != nil && resp.IsError() {
+		t.Fatal(resp.Error())
+	}
+
+	l, _ := req.Storage.List(context.Background(), "pathF")
+	assert.Empty(t, l)
 }
