@@ -2,6 +2,11 @@ package jwtsecrets
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/json"
+	"encoding/pem"
+	"fmt"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -41,6 +46,21 @@ func TestGetNewKey(t *testing.T) {
 		t.Error("Keys for different paths must be unique")
 	}
 	if diff := deep.Equal(respA.Data["id"], respB.Data["id"]); diff == nil {
+		t.Error("Key ids for different paths must be unique")
+	}
+
+	// Check if pem correspond to original key
+	block, _ := pem.Decode([]byte(respB.Data["pem"].([]byte)))
+	assert.NotEmpty(t, block)
+	priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	assert.NoError(t, err, "Should not error")
+
+	rawKey, err := req.Storage.Get(context.Background(), fmt.Sprintf("%s/%s", keysPath("pathB"), respB.Data["id"]))
+	assert.NoError(t, err, "Should not error")
+	var key rsa.PrivateKey
+	err = json.Unmarshal(rawKey.Value, &key)
+	assert.NoError(t, err, "Should not error")
+	if diff := deep.Equal(key, priv); diff == nil {
 		t.Error("Key ids for different paths must be unique")
 	}
 }

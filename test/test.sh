@@ -90,6 +90,3 @@ else
     echo "jwt3 is valid on the '/jwt/test' path but should only be valid on the '/jwt/foo' path"
     exit 1
 fi
-
-pem=$(vault read -field=pem jwt/foo/keys)
-echo $pem
