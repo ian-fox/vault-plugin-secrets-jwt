@@ -5,10 +5,10 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -21,17 +21,10 @@ const (
 	secretTypeKey = "rsa_key"
 )
 
-type keyStorage struct {
-	KeyUsage map[string]string      `json:"key_usage"`
-	Keys     map[string]*signingKey `json:"keys"`
-}
-
 // signingKey holds a RSA key with a specified TTL.
 type signingKey struct {
-	UseCount int
-	UseUntil time.Time
-	Key      *rsa.PrivateKey
-	ID       string
+	Key *rsa.PrivateKey
+	ID  string
 }
 
 func pathSecret(b *backend) *framework.Path {
@@ -80,9 +73,17 @@ func (b *backend) pathKeysDelete(ctx context.Context, r *logical.Request, d *fra
 	}
 	name := nameRaw.(string)
 
-	err := r.Storage.Delete(ctx, keysPath(name))
+	keyIDs, err := r.Storage.List(ctx, fmt.Sprintf("%s/", keysPath(name)))
 	if err != nil {
-		return logical.ErrorResponse("Failed to delete keys"), err
+		b.Logger().Error("Failed to list keys.", "error", err)
+		return nil, err
+	}
+
+	for _, v := range keyIDs {
+		err := r.Storage.Delete(ctx, fmt.Sprintf("%s/%s", keysPath(name), v))
+		if err != nil {
+			return logical.ErrorResponse("Failed to delete keys"), err
+		}
 	}
 	return nil, nil
 }
@@ -96,7 +97,8 @@ func (b *backend) pathKeysRead(ctx context.Context, r *logical.Request, d *frame
 
 	key, err := b.getKey(ctx, name, r)
 	if err != nil {
-		return logical.ErrorResponse("failed to get keys"), nil
+		b.Logger().Error("Failed to get keys.", "error", err)
+		return logical.ErrorResponse("failed to get keys"), err
 	}
 
 	pem := pem.EncodeToMemory(
@@ -111,8 +113,8 @@ func (b *backend) pathKeysRead(ctx context.Context, r *logical.Request, d *frame
 		"id":  key.ID,
 	}
 	internalD := map[string]interface{}{
-		"request_id": r.ID,
-		"path_name":  name,
+		"key_id":    key.ID,
+		"path_name": name,
 	}
 
 	return b.Secret(secretTypeKey).Response(secretD, internalD), nil
@@ -120,68 +122,20 @@ func (b *backend) pathKeysRead(ctx context.Context, r *logical.Request, d *frame
 
 // getKey will return a valid key if one is available, or otherwise generate a new one.
 func (b *backend) getKey(ctx context.Context, name string, r *logical.Request) (*signingKey, error) {
-	b.keysLock.Lock()
-	defer b.keysLock.Unlock()
+	key, err := b.getNewKey()
+	if err != nil {
+		return nil, errors.New("failed to generate new key")
+	}
+	entry, err := logical.StorageEntryJSON(fmt.Sprintf("%s/%s", keysPath(name), key.ID), key)
+	if err != nil {
+		return nil, err
+	}
+	err = r.Storage.Put(ctx, entry)
+	if err != nil {
+		return nil, err
+	}
 
-	s := r.Storage
-	keyStorage, err := b.getKeyStorage(ctx, name, s)
-	if err != nil {
-		return nil, errors.New("Failed to load keys")
-	}
-	key, err := b.getExistingKey(keyStorage)
-	if err != nil {
-		key, err = b.getNewKey()
-		if err != nil {
-			return nil, errors.New("failed to generate new key")
-		}
-		keyStorage.Keys[key.ID] = key
-	}
-	keyStorage.KeyUsage[r.ID] = key.ID
-	key.UseCount++
-	err = b.saveKeys(ctx, name, keyStorage, s)
-	b.Logger().Info("Added key usage", "KeyID", key.ID, "RequestId", r.ID, "Count", key.UseCount) //TODO: Change to debug
 	return key, err
-}
-
-func (b *backend) saveKeys(ctx context.Context, name string, keyStorage *keyStorage, s logical.Storage) error {
-	entry, err := logical.StorageEntryJSON(keysPath(name), *keyStorage)
-	if err != nil {
-		return err
-	}
-	err = s.Put(ctx, entry)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (b *backend) getKeyStorage(ctx context.Context, name string, s logical.Storage) (*keyStorage, error) {
-	entry, err := s.Get(ctx, keysPath(name))
-	keyStorage := &keyStorage{
-		KeyUsage: make(map[string]string, 4),
-		Keys:     make(map[string]*signingKey, 4),
-	}
-	if err != nil {
-		return nil, err
-	}
-	if entry == nil {
-		return keyStorage, nil
-	}
-	if err := entry.DecodeJSON(keyStorage); err != nil {
-		return nil, err
-	}
-
-	return keyStorage, nil
-}
-
-func (b *backend) getExistingKey(keyStorage *keyStorage) (*signingKey, error) {
-	now := b.clock.now()
-	for _, v := range keyStorage.Keys {
-		if v.UseUntil.Add(-b.config.TokenTTL).After(now) {
-			return v, nil
-		}
-	}
-	return nil, errors.New("no valid key found")
 }
 
 func (b *backend) getNewKey() (*signingKey, error) {
@@ -195,22 +149,16 @@ func (b *backend) getNewKey() (*signingKey, error) {
 		return nil, err
 	}
 
-	rotationTime := b.clock.now().Add(b.config.KeyRotationPeriod)
-
 	newKey := &signingKey{
-		ID:       kid.String(),
-		Key:      privateKey,
-		UseUntil: rotationTime,
+		ID:  kid.String(),
+		Key: privateKey,
 	}
 
 	return newKey, nil
 }
 
 func (b *backend) revokeKey(ctx context.Context, r *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	b.keysLock.Lock()
-	defer b.keysLock.Lock()
-
-	reqID, ok := r.Secret.InternalData["request_id"]
+	keyID, ok := r.Secret.InternalData["key_id"]
 	if !ok {
 		return nil, fmt.Errorf("invalid secret, internal data is missing request ID")
 	}
@@ -219,61 +167,51 @@ func (b *backend) revokeKey(ctx context.Context, r *logical.Request, d *framewor
 		return nil, fmt.Errorf("invalid secret, internal data is missing path name")
 	}
 
-	keyStorage, err := b.getKeyStorage(ctx, name.(string), r.Storage)
+	err := r.Storage.Delete(ctx, fmt.Sprintf("%s/%s", keysPath(name.(string)), keyID))
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse("Failed to delete key"), err
 	}
 
-	keyID, ok := keyStorage.KeyUsage[reqID.(string)]
-	delete(keyStorage.KeyUsage, reqID.(string))
-	if !ok {
-		return logical.ErrorResponse("failed to revoke key"), nil
-	}
-	key := keyStorage.Keys[keyID]
-	key.UseCount--
-
-	b.Logger().Info("Removed key usage.", "KeyID", key.ID, "RequestId", reqID, "Count", key.UseCount) //TODO: Change to debug
-	if key.UseCount == 0 {
-		b.Logger().Info("Revoking key", "keyID", keyID)
-		delete(keyStorage.Keys, keyID)
-	}
-	err = b.saveKeys(ctx, name.(string), keyStorage, r.Storage)
-	if err != nil {
-		b.Logger().Error("Failed to save key revocation.", "error", err)
-		return nil, err
-	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"key_id": key.ID,
-			"usage":  key.UseCount,
+			"key_id": keyID,
 		},
 	}, nil
 }
 
 // GetPublicKeys returns a set of JSON Web Keys.
 func (b *backend) getPublicKeys(ctx context.Context, name string, s logical.Storage) (*jose.JSONWebKeySet, error) {
-	keyStorage, err := b.getKeyStorage(ctx, name, s)
+	keyIDs, err := s.List(ctx, fmt.Sprintf("%s/", keysPath(name)))
 	if err != nil {
+		b.Logger().Error("Failed to list keys.", "error", err)
 		return nil, err
 	}
-
 	jwks := jose.JSONWebKeySet{
-		Keys: make([]jose.JSONWebKey, len(keyStorage.Keys)),
+		Keys: make([]jose.JSONWebKey, len(keyIDs)),
 	}
 
-	i := 0
-	for _, v := range keyStorage.Keys {
-		jwks.Keys[i].Key = &v.Key.PublicKey
-		jwks.Keys[i].KeyID = v.ID
+	for i, v := range keyIDs {
+		var key signingKey
+		rawKey, err := s.Get(ctx, fmt.Sprintf("%s/%s", keysPath(name), v))
+		if err != nil {
+			b.Logger().Error("Failed to list keys.", "error", err)
+			return nil, err
+		}
+		err = json.Unmarshal(rawKey.Value, &key)
+		if err != nil {
+			b.Logger().Error("Failed to unmarshal key.", "error", err)
+			return nil, err
+		}
+		jwks.Keys[i].Key = &key.Key.PublicKey
+		jwks.Keys[i].KeyID = key.ID
 		jwks.Keys[i].Algorithm = "RS256"
 		jwks.Keys[i].Use = "sig"
-		i++
 	}
 
 	return &jwks, nil
 }
 
-// claimsPath returns the formated keys path
+// keysPath returns the formated keys path
 func keysPath(name string) string {
 	return fmt.Sprintf("%s/%s", name, keyKeys)
 }

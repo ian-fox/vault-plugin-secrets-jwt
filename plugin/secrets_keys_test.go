@@ -3,7 +3,6 @@ package jwtsecrets
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -46,7 +45,7 @@ func TestGetNewKey(t *testing.T) {
 	}
 }
 
-func TestGetExistingKey(t *testing.T) {
+func TestGetNewKeySamePath(t *testing.T) {
 	b, storage := getTestBackend(t)
 
 	req := &logical.Request{
@@ -69,11 +68,11 @@ func TestGetExistingKey(t *testing.T) {
 	assert.NoError(t, err, "Should not error")
 	assert.NotEmpty(t, respB.Data)
 
-	if diff := deep.Equal(respA.Data["pem"], respB.Data["pem"]); diff != nil {
-		t.Error("Keys must be the same until rotated")
+	if diff := deep.Equal(respA.Data["pem"], respB.Data["pem"]); diff == nil {
+		t.Error("Keys for different paths must be unique")
 	}
-	if diff := deep.Equal(respA.Data["id"], respB.Data["id"]); diff != nil {
-		t.Error("Key ids must be the same until rotated")
+	if diff := deep.Equal(respA.Data["id"], respB.Data["id"]); diff == nil {
+		t.Error("Key ids for different paths must be unique")
 	}
 }
 
@@ -102,87 +101,8 @@ func TestRevokeKeys(t *testing.T) {
 		t.Fatal(resp.Error())
 	}
 
-	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      keysPath("pathC"),
-		Storage:   *storage,
-	}
-
-	respB, err := b.HandleRequest(context.Background(), req)
-	assert.NoError(t, err, "Should not error")
-	assert.NotEmpty(t, respA.Data)
-
-	if diff := deep.Equal(respA.Data["pem"], respB.Data["pem"]); diff == nil {
-		t.Error("Keys should have been rotated")
-	}
-	if diff := deep.Equal(respA.Data["id"], respB.Data["id"]); diff == nil {
-		t.Error("Keys should have been rotated")
-	}
-}
-
-func TestExpiringKeys(t *testing.T) {
-	b, storage := getTestBackend(t)
-	b.config.KeyRotationPeriod, _ = time.ParseDuration("1m")
-	b.config.TokenTTL, _ = time.ParseDuration("2m")
-
-	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      keysPath("pathC"),
-		Storage:   *storage,
-	}
-
-	respA, err := b.HandleRequest(context.Background(), req)
-	assert.NoError(t, err, "Should not error")
-	assert.NotEmpty(t, respA.Data)
-
-	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      keysPath("pathC"),
-		Storage:   *storage,
-	}
-
-	respB, err := b.HandleRequest(context.Background(), req)
-	assert.NoError(t, err, "Should not error")
-	assert.NotEmpty(t, respA.Data)
-
-	if diff := deep.Equal(respA.Data["pem"], respB.Data["pem"]); diff == nil {
-		t.Error("Keys should have been rotated")
-	}
-	if diff := deep.Equal(respA.Data["id"], respB.Data["id"]); diff == nil {
-		t.Error("Keys should have been rotated")
-	}
-}
-
-func TestRotateKeys(t *testing.T) {
-	b, storage := getTestBackend(t)
-	b.config.KeyRotationPeriod, _ = time.ParseDuration("0s")
-
-	req := &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      keysPath("pathC"),
-		Storage:   *storage,
-	}
-
-	respA, err := b.HandleRequest(context.Background(), req)
-	assert.NoError(t, err, "Should not error")
-	assert.NotEmpty(t, respA.Data)
-
-	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      keysPath("pathC"),
-		Storage:   *storage,
-	}
-
-	respB, err := b.HandleRequest(context.Background(), req)
-	assert.NoError(t, err, "Should not error")
-	assert.NotEmpty(t, respA.Data)
-
-	if diff := deep.Equal(respA.Data["pem"], respB.Data["pem"]); diff == nil {
-		t.Error("Keys should have been rotated")
-	}
-	if diff := deep.Equal(respA.Data["id"], respB.Data["id"]); diff == nil {
-		t.Error("Keys should have been rotated")
-	}
+	l, _ := req.Storage.List(context.Background(), "pathC")
+	assert.Empty(t, l)
 }
 
 func TestDeleteKey(t *testing.T) {
@@ -190,25 +110,25 @@ func TestDeleteKey(t *testing.T) {
 
 	req := &logical.Request{
 		Operation: logical.ReadOperation,
-		Path:      keysPath("pathA"),
+		Path:      keysPath("pathD"),
 		Storage:   *storage,
 	}
 
 	respA, err := b.HandleRequest(context.Background(), req)
 	assert.NoError(t, err, "Should not error")
 	assert.NotEmpty(t, respA.Data)
-	l, _ := req.Storage.List(context.Background(), "pathA")
+	l, _ := req.Storage.List(context.Background(), keysPath("pathD"))
 	assert.NotEmpty(t, l)
 
 	req = &logical.Request{
 		Operation: logical.DeleteOperation,
-		Path:      keysPath("pathA"),
+		Path:      keysPath("pathD"),
 		Storage:   *storage,
 	}
 
 	respB, err := b.HandleRequest(context.Background(), req)
 	assert.NoError(t, err, "Should not error")
 	assert.Empty(t, respB)
-	l, _ = req.Storage.List(context.Background(), "pathA")
+	l, _ = req.Storage.List(context.Background(), keysPath("pathD"))
 	assert.Empty(t, l)
 }

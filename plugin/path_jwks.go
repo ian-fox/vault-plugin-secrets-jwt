@@ -16,7 +16,7 @@ func pathJwks(b *backend) *framework.Path {
 				Description: "Required. Path name.",
 			},
 		},
-		Pattern: fmt.Sprintf("%s/%s", framework.GenericNameRegex("name"), "jwks"),
+		Pattern: fmt.Sprintf("%s/%s", "jwks", framework.GenericNameRegex("name")),
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathJwksRead,

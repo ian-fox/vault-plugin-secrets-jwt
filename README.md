@@ -51,16 +51,6 @@ vault write jwt/<key_name>/sign @claims.json
 }
 ```
 
-### JWKS
-
-Exposes the public key on an unauthenticated endpoint.
-
-Example
-
-```bash
-curl <vault_addr>/v1/jwt/<key_name>/jwks
-```
-
 ### Keys
 
 Returns the generated private key, in PEM format.
@@ -69,3 +59,15 @@ Example
 ```
 vault read jwt/<key_name>/keys
 ```
+
+### JWKS
+
+Exposes the public key on an unauthenticated endpoint.
+
+Example
+
+```bash
+curl <vault_addr>/v1/jwt/jwks/<key_name>
+```
+
+**WARNING**: In the JWKS path the key is at the end of the URL so and jwks key (jwks/*) is public.

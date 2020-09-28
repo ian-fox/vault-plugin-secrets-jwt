@@ -2,7 +2,6 @@ package jwtsecrets
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -22,10 +21,6 @@ func pathConfig(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config",
 		Fields: map[string]*framework.FieldSchema{
-			keyRotationDuration: {
-				Type:        framework.TypeString,
-				Description: `Duration before a key stops being used to sign new tokens.`,
-			},
 			keyTokenTTL: {
 				Type:        framework.TypeString,
 				Description: `Duration a token is valid for.`,
@@ -66,24 +61,12 @@ func (b *backend) pathConfigWrite(ctx context.Context, r *logical.Request, d *fr
 	b.configLock.Lock()
 	defer b.configLock.Unlock()
 
-	if newRotationPeriod, ok := d.GetOk(keyRotationDuration); ok {
-		duration, err := time.ParseDuration(newRotationPeriod.(string))
-		if err != nil {
-			return nil, err
-		}
-		b.config.KeyRotationPeriod = duration
-	}
-
 	if newTTL, ok := d.GetOk(keyTokenTTL); ok {
 		duration, err := time.ParseDuration(newTTL.(string))
 		if err != nil {
 			return nil, err
 		}
 		b.config.TokenTTL = duration
-	}
-
-	if b.config.TokenTTL >= b.config.KeyRotationPeriod {
-		return logical.ErrorResponse("Key will expire before token."), errors.New("tokenTTL larger than keyTTL")
 	}
 
 	if newSetIat, ok := d.GetOk(keySetIAT); ok {
@@ -124,12 +107,11 @@ func (b *backend) pathConfigRead(_ context.Context, _ *logical.Request, d *frame
 func nonLockingRead(b *backend) (*logical.Response, error) {
 	return &logical.Response{
 		Data: map[string]interface{}{
-			keyRotationDuration: b.config.KeyRotationPeriod.String(),
-			keyTokenTTL:         b.config.TokenTTL.String(),
-			keySetIAT:           b.config.SetIAT,
-			keySetJTI:           b.config.SetJTI,
-			keySetNBF:           b.config.SetNBF,
-			keyIssuer:           b.config.Issuer,
+			keyTokenTTL: b.config.TokenTTL.String(),
+			keySetIAT:   b.config.SetIAT,
+			keySetJTI:   b.config.SetJTI,
+			keySetNBF:   b.config.SetNBF,
+			keyIssuer:   b.config.Issuer,
 		},
 	}, nil
 }
