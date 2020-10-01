@@ -56,7 +56,7 @@ vault write jwt/<key_name>/sign @claims.json
 
 ### Keys
 
-Returns the generated private key, in base64 encoded PEM format.
+Returns the generated private key, in base64 encoded in PKCS8 PEM format.
 
 Example
 ```

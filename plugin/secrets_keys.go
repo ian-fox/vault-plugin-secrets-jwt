@@ -100,11 +100,16 @@ func (b *backend) pathKeysRead(ctx context.Context, r *logical.Request, d *frame
 		b.Logger().Error("Failed to get keys.", "error", err)
 		return logical.ErrorResponse("failed to get keys"), err
 	}
+	pkcs8, err := x509.MarshalPKCS8PrivateKey(key.Key)
+	if err != nil {
+		b.Logger().Error("Failed to get keys.", "error", err)
+		return logical.ErrorResponse("marchal key to pkcs8"), err
+	}
 
 	pem := pem.EncodeToMemory(
 		&pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(key.Key),
+			Type:  "PRIVATE KEY",
+			Bytes: pkcs8,
 		},
 	)
 
