@@ -47,7 +47,7 @@ func TestGetNewKey(t *testing.T) {
 	// Check if pem correspond to original key
 	block, _ := pem.Decode([]byte(respB.Data["pem"].([]byte)))
 	assert.NotEmpty(t, block)
-	priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 	assert.NoError(t, err, "Should not error")
 
 	rawKey, err := req.Storage.Get(context.Background(), fmt.Sprintf("%s/%s", keysPath("pathB"), respB.Data["id"]))
