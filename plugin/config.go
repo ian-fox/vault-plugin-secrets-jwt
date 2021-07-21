@@ -10,6 +10,7 @@ import (
 // Default values for configuration options.
 const (
 	DefaultTokenTTL = "5m0s"
+	DefaultMaxTTL   = 16977600
 	DefaultSetIAT   = true
 	DefaultSetJTI   = true
 	DefaultSetNBF   = true
@@ -19,6 +20,9 @@ const (
 type Config struct {
 	// TokenTTL defines how long a token is valid for after being signed.
 	TokenTTL time.Duration
+
+	// MaxTTL defines max lease TTL for the secret.
+	MaxTTL time.Duration
 
 	// SetIat defines if the backend sets the 'iat' claim or not.
 	SetIAT bool
@@ -37,6 +41,7 @@ type Config struct {
 func DefaultConfig(backendUUID string) *Config {
 	c := new(Config)
 	c.TokenTTL, _ = time.ParseDuration(DefaultTokenTTL)
+	c.MaxTTL = time.Duration(DefaultMaxTTL) * time.Second
 	c.SetIAT = DefaultSetIAT
 	c.SetJTI = DefaultSetJTI
 	c.SetNBF = DefaultSetNBF
@@ -55,5 +60,6 @@ func readConfig(ctx context.Context, backendUUID string, s logical.Storage) (*Co
 	if err := entry.DecodeJSON(c); err != nil {
 		return nil, err
 	}
+
 	return c, nil
 }

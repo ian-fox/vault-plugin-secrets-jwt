@@ -10,6 +10,7 @@ import (
 
 const (
 	keyTokenTTL = "jwt_ttl"
+	keyMaxTTL   = "max_ttl"
 	keySetIAT   = "set_iat"
 	keySetJTI   = "set_jti"
 	keySetNBF   = "set_nbf"
@@ -23,6 +24,10 @@ func pathConfig(b *backend) *framework.Path {
 			keyTokenTTL: {
 				Type:        framework.TypeString,
 				Description: `Duration a token is valid for.`,
+			},
+			"max_ttl": {
+				Type:        framework.TypeDurationSecond,
+				Description: "Maximum time key is valid for. If <= 0, will use system default.",
 			},
 			keySetIAT: {
 				Type:        framework.TypeBool,
@@ -68,6 +73,10 @@ func (b *backend) pathConfigWrite(ctx context.Context, r *logical.Request, d *fr
 		b.config.TokenTTL = duration
 	}
 
+	if maxTTL, ok := d.GetOk(keyMaxTTL); ok {
+		b.config.MaxTTL = time.Duration(maxTTL.(int)) * time.Second
+	}
+
 	if newSetIat, ok := d.GetOk(keySetIAT); ok {
 		b.config.SetIAT = newSetIat.(bool)
 	}
@@ -107,6 +116,7 @@ func nonLockingRead(b *backend) (*logical.Response, error) {
 	return &logical.Response{
 		Data: map[string]interface{}{
 			keyTokenTTL: b.config.TokenTTL.String(),
+			keyMaxTTL:   int64(b.config.MaxTTL / time.Second),
 			keySetIAT:   b.config.SetIAT,
 			keySetJTI:   b.config.SetJTI,
 			keySetNBF:   b.config.SetNBF,
@@ -122,8 +132,7 @@ Configure the backend.
 const pathConfigHelpDesc = `
 Configure the backend.
 
-key_ttl:          Duration before a key stops signing new tokens and a new one is generated.
-		          After this period the public key will still be available to verify JWTs.
+max_ttl:          Maximum time key is valid for. If <= 0, will use system default.
 jwt_ttl:          Duration before a token expires.
 set_iat:          Whether or not the backend should generate and set the 'iat' claim.
 set_jti:          Whether or not the backend should generate and set the 'jti' claim.

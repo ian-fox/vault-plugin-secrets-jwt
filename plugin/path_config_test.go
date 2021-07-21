@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	updatedTTL = "6m0s"
-	newIssuer  = "new-vault"
+	updatedTTL    = "6m0s"
+	updatedMaxTTL = int64(10)
+	newIssuer     = "new-vault"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -43,6 +44,7 @@ func TestWriteConfig(t *testing.T) {
 		Storage:   *storage,
 		Data: map[string]interface{}{
 			keyTokenTTL: updatedTTL,
+			keyMaxTTL:   updatedMaxTTL,
 			keySetIAT:   false,
 			keySetJTI:   false,
 			keySetNBF:   false,
@@ -56,6 +58,7 @@ func TestWriteConfig(t *testing.T) {
 	}
 
 	tokenTTL := resp.Data[keyTokenTTL].(string)
+	maxTTL := resp.Data[keyMaxTTL].(int64)
 	setIAT := resp.Data[keySetIAT].(bool)
 	setJTI := resp.Data[keySetJTI].(bool)
 	setNBF := resp.Data[keySetNBF].(bool)
@@ -63,6 +66,10 @@ func TestWriteConfig(t *testing.T) {
 
 	if diff := deep.Equal(updatedTTL, tokenTTL); diff != nil {
 		t.Error("expiry period should be unchanged:", diff)
+	}
+
+	if diff := deep.Equal(updatedMaxTTL, maxTTL); diff != nil {
+		t.Error("max ttl should be 10:", diff)
 	}
 
 	if diff := deep.Equal(false, setIAT); diff != nil {

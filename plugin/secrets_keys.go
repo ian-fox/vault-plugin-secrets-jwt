@@ -122,6 +122,9 @@ func (b *backend) pathKeysRead(ctx context.Context, r *logical.Request, d *frame
 		"path_name": name,
 	}
 
+	resp := b.Secret(secretTypeKey).Response(secretD, internalD)
+	resp.Secret.MaxTTL = b.config.MaxTTL
+
 	return b.Secret(secretTypeKey).Response(secretD, internalD), nil
 }
 

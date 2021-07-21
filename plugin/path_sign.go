@@ -110,8 +110,10 @@ func (b *backend) pathSignWrite(ctx context.Context, r *logical.Request, d *fram
 		"key_id":    key.ID,
 		"path_name": name,
 	}
+	resp := b.Secret(secretTypeKey).Response(secretD, internalD)
+	resp.Secret.MaxTTL = b.config.MaxTTL
 
-	return b.Secret(secretTypeToken).Response(secretD, internalD), nil
+	return resp, nil
 }
 
 // signPath returns the formated claims path
