@@ -1,4 +1,7 @@
 # Vault Plugin: JWT Backend 
+
+This was originally a toy project made to learn about vault, a more fully-featured and updated version is at https://github.com/outfoxx/vault-plugin-secrets-jwt/
+
 ![](https://travis-ci.org/ian-fox/vault-plugin-secrets-jwt.svg?branch=master)
 ![](https://goreportcard.com/badge/github.com/ian-fox/vault-plugin-secrets-jwt)
 
